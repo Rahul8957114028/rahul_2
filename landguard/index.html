@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LandGuard - Landslide Early Warning & Community Alert System</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            guard: {
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Fonts & Lucide Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="styles.css">
+
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+  </style>
+</head>
+<body data-page="index" class="bg-slate-900 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-amber-500 selection:text-slate-950">
+
+  <!-- TOP EMERGENCY MARQUEE BANNER -->
+  <aside aria-label="Emergency Alerts" id="emergencyBanner" class="bg-amber-500 text-slate-950 px-4 py-2 text-xs md:text-sm font-semibold flex items-center justify-between shadow-md transition-colors duration-500">
+    <div class="flex items-center space-x-2 max-w-6xl mx-auto flex-1 truncate">
+      <span class="inline-flex items-center justify-center p-1 bg-slate-950 text-amber-400 rounded-md">
+        <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+      </span>
+      <span class="font-bold tracking-wider uppercase text-[11px] bg-slate-950/10 px-2 py-0.5 rounded" id="bannerRiskBadge">ADVISORY</span>
+      <span id="bannerText" class="truncate">
+        Monsoon precipitation active: Station Alpha soil moisture at 76.4% (Threshold: 70%). Mountain residents stay alert.
+      </span>
+    </div>
+    <div class="flex items-center space-x-3 text-xs pl-2">
+      <button id="btnSirenToggle" class="flex items-center space-x-1.5 bg-slate-950 text-white px-2.5 py-1 rounded hover:bg-slate-800 transition shadow">
+        <i data-lucide="volume-2" class="w-3.5 h-3.5 text-amber-400"></i>
+        <span id="sirenBtnText">Test Siren</span>
+      </button>
+      <button onclick="document.getElementById('emergencyBanner').classList.toggle('hidden')" class="hover:opacity-75 text-slate-950 p-1" title="Dismiss Banner">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+  </aside>
+
+  <!-- UNIFIED NAVIGATION BAR -->
+  <header class="sticky top-0 z-40 bg-slate-900/95 backdrop-blur border-b border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      
+      <!-- Brand Logo -->
+      <a href="index.html" class="flex items-center space-x-3 group">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 via-teal-500 to-amber-400 flex items-center justify-center text-slate-950 shadow-lg shadow-emerald-950/30 group-hover:scale-105 transition-transform">
+          <i data-lucide="shield-alert" class="w-6 h-6 stroke-[2.2]"></i>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="text-xl font-black tracking-tight text-white">Land<span class="text-emerald-400">Guard</span></span>
+            <span class="px-1.5 py-0.5 text-[10px] font-bold uppercase rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Network Live</span>
+          </div>
+          <p class="text-[11px] text-slate-400 hidden sm:block">Community Landslide Early Warning & Sensor Telemetry</p>
+        </div>
+      </a>
+
+      <!-- Navigation Links -->
+      <nav class="hidden lg:flex items-center space-x-1 bg-slate-800/80 p-1 rounded-xl border border-slate-700/60 text-xs font-semibold">
+        <a href="index.html" data-nav-target="index" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition">Home</a>
+        <a href="alerts.html" data-nav-target="alerts" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition">Alerts & SMS</a>
+        <a href="map.html" data-nav-target="map" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition">Hazard Map</a>
+        <a href="telemetry.html" data-nav-target="telemetry" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition">Sensor Telemetry</a>
+        <a href="community.html" data-nav-target="community" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition">Community Safety</a>
+        <a href="reports.html" data-nav-target="reports" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition">Citizen Reports</a>
+      </nav>
+
+      <!-- Right Action Buttons -->
+      <div class="flex items-center space-x-2.5">
+        <button onclick="openSmsSimulator()" class="flex items-center space-x-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-medium transition shadow-sm">
+          <i data-lucide="smartphone" class="w-3.5 h-3.5 text-amber-400"></i>
+          <span class="hidden sm:inline">Test SMS Alert</span>
+        </button>
+        <a href="#emergencyHelplines" class="flex items-center space-x-1.5 bg-red-600 hover:bg-red-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold transition shadow-md shadow-red-950/40">
+          <i data-lucide="phone-call" class="w-3.5 h-3.5 animate-pulse"></i>
+          <span>SOS Helplines</span>
+        </a>
+      </div>
+
+    </div>
+
+    <!-- Mobile Nav Bar (Below header on small screens) -->
+    <div class="lg:hidden border-t border-slate-800 px-4 py-2 flex items-center justify-between overflow-x-auto text-xs font-medium space-x-2">
+      <a href="index.html" class="px-2.5 py-1 rounded-md text-emerald-400 whitespace-nowrap">Home</a>
+      <a href="alerts.html" class="px-2.5 py-1 rounded-md text-slate-300 whitespace-nowrap">Alerts</a>
+      <a href="map.html" class="px-2.5 py-1 rounded-md text-slate-300 whitespace-nowrap">Map</a>
+      <a href="telemetry.html" class="px-2.5 py-1 rounded-md text-slate-300 whitespace-nowrap">Sensors</a>
+      <a href="community.html" class="px-2.5 py-1 rounded-md text-slate-300 whitespace-nowrap">Safety</a>
+      <a href="reports.html" class="px-2.5 py-1 rounded-md text-slate-300 whitespace-nowrap">Report Hazard</a>
+    </div>
+  </header>
+
+  <!-- MAIN HOMEPAGE CONTENT -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
+
+    <!-- HERO SECTION -->
+    <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-800 via-slate-850 to-slate-900 border border-slate-800 p-6 md:p-10 shadow-2xl">
+      <div class="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none"></div>
+      <div class="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+        
+        <div class="lg:col-span-7 space-y-5">
+          <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-slate-800/90 border border-slate-700 text-xs font-medium text-slate-300">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+            <span>Real-Time Hillside Geohazard Network • Active Sector: <strong class="text-white">Shimla Hill Slopes</strong></span>
+          </div>
+
+          <h1 class="text-3xl sm:text-5xl font-black tracking-tight text-white leading-tight">
+            Protecting Mountain Communities Before the Slope Moves.
+          </h1>
+
+          <p class="text-slate-300 text-sm sm:text-base leading-relaxed max-w-2xl">
+            LandGuard is an automated landslide early-warning infrastructure. We combine multi-depth IoT soil saturation probes, tipping-bucket precipitation gauges, and GSM cellular SMS broadcasts to safeguard hillside settlements.
+          </p>
+
+          <div class="flex flex-wrap gap-3 pt-2">
+            <a href="map.html" class="inline-flex items-center space-x-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-5 py-3 rounded-xl text-sm transition shadow-lg shadow-emerald-500/20">
+              <i data-lucide="map-pin" class="w-4 h-4"></i>
+              <span>Open Geohazard Map & Shelters</span>
+            </a>
+            <a href="alerts.html" class="inline-flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-semibold px-5 py-3 rounded-xl text-sm transition">
+              <i data-lucide="bell-ring" class="w-4 h-4 text-amber-400"></i>
+              <span>Get Village SMS Alerts</span>
+            </a>
+            <a href="telemetry.html" class="inline-flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white font-semibold px-4 py-3 rounded-xl text-sm transition">
+              <i data-lucide="activity" class="w-4 h-4 text-blue-400"></i>
+              <span>Sensor Dashboard</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Dynamic Overall Risk Dial Card -->
+        <div class="lg:col-span-5 bg-slate-900/90 rounded-2xl border border-slate-700/80 p-6 space-y-5 shadow-2xl">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Current Regional Alert Level</span>
+            <span class="text-[11px] font-mono text-emerald-400">Telemetry Live</span>
+          </div>
+
+          <div class="flex items-center space-x-4">
+            <div class="w-16 h-16 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+              <i data-lucide="alert-circle" class="w-9 h-9"></i>
+            </div>
+            <div>
+              <div class="flex items-center space-x-2">
+                <span class="text-2xl font-black text-amber-400">ADVISORY</span>
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded bg-amber-500/20 text-amber-300">Level 2 / 4</span>
+              </div>
+              <p class="text-xs text-slate-300 mt-1 leading-snug">
+                Soil moisture at 76.4% on North Ridge. Slope saturation high. Stay off vulnerable cut slopes.
+              </p>
+            </div>
+          </div>
+
+          <!-- Risk Bar -->
+          <div class="space-y-1.5 pt-1">
+            <div class="flex justify-between text-xs font-medium">
+              <span class="text-slate-400">Landslide Threat Score</span>
+              <span class="font-mono text-amber-400 font-bold">58 / 100</span>
+            </div>
+            <div class="h-3 w-full bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-700">
+              <div class="h-full bg-gradient-to-r from-emerald-500 via-amber-500 to-red-500 rounded-full" style="width: 58%"></div>
+            </div>
+            <div class="flex justify-between text-[10px] text-slate-400 pt-0.5 font-mono">
+              <span>Normal (0-35)</span>
+              <span>Advisory (36-65)</span>
+              <span>Warning (66-85)</span>
+              <span>Evacuate (86+)</span>
+            </div>
+          </div>
+
+          <div class="bg-slate-800/80 rounded-xl p-3.5 text-xs space-y-2 border border-slate-700/50">
+            <div class="font-semibold text-slate-200 flex items-center space-x-1.5">
+              <i data-lucide="shield" class="w-3.5 h-3.5 text-amber-400"></i>
+              <span>Immediate Resident Directive:</span>
+            </div>
+            <p class="text-slate-300 text-[11px] leading-relaxed">
+              Charge battery emergency lights. Ensure personal grab-bags are packed. Avoid nighttime transit on hillside bypass road.
+            </p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 6 CORE PLATFORM MODULES GRID -->
+    <section class="space-y-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-xl font-bold text-white flex items-center space-x-2">
+            <i data-lucide="layout-grid" class="w-5 h-5 text-emerald-400"></i>
+            <span>LandGuard Platform Subsystems</span>
+          </h2>
+          <p class="text-xs text-slate-400">Explore dedicated tools for emergency warning, geotechnical analytics, and community preparedness.</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        
+        <!-- Subsystem 1: Alerts Hub -->
+        <a href="alerts.html" class="p-6 rounded-2xl bg-slate-800/80 border border-slate-700 hover:border-amber-500/60 hover:bg-slate-800 transition group space-y-3 shadow">
+          <div class="w-12 h-12 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 group-hover:scale-110 transition-transform">
+            <i data-lucide="message-square" class="w-6 h-6"></i>
+          </div>
+          <h3 class="text-base font-bold text-white group-hover:text-amber-400 transition-colors">Alerts & SMS Broadcasts</h3>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Subscribe to village-specific alerts, test the on-screen mobile alert simulator, and view official emergency broadcast bulletins.
+          </p>
+          <div class="text-xs font-semibold text-amber-400 flex items-center space-x-1 pt-2">
+            <span>Open Alert System</span>
+            <span>→</span>
+          </div>
+        </a>
+
+        <!-- Subsystem 2: Hazard Map -->
+        <a href="map.html" class="p-6 rounded-2xl bg-slate-800/80 border border-slate-700 hover:border-emerald-500/60 hover:bg-slate-800 transition group space-y-3 shadow">
+          <div class="w-12 h-12 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform">
+            <i data-lucide="map" class="w-6 h-6"></i>
+          </div>
+          <h3 class="text-base font-bold text-white group-hover:text-emerald-400 transition-colors">Geohazard & Shelter Map</h3>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Full-screen interactive Leaflet map showing telemetry stations, high-risk escarpment zones, and safe shelter routing directions.
+          </p>
+          <div class="text-xs font-semibold text-emerald-400 flex items-center space-x-1 pt-2">
+            <span>Explore Map Layers</span>
+            <span>→</span>
+          </div>
+        </a>
+
+        <!-- Subsystem 3: Sensor Telemetry -->
+        <a href="telemetry.html" class="p-6 rounded-2xl bg-slate-800/80 border border-slate-700 hover:border-blue-500/60 hover:bg-slate-800 transition group space-y-3 shadow">
+          <div class="w-12 h-12 rounded-xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-400 group-hover:scale-110 transition-transform">
+            <i data-lucide="activity" class="w-6 h-6"></i>
+          </div>
+          <h3 class="text-base font-bold text-white group-hover:text-blue-400 transition-colors">Sensor & Telemetry Analytics</h3>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Deep geotechnical dashboard tracking multi-depth soil moisture (0.5m, 1.2m, 2.5m), rain rate, pore pressure, and Factor of Safety calculations.
+          </p>
+          <div class="text-xs font-semibold text-blue-400 flex items-center space-x-1 pt-2">
+            <span>View Live Telemetry</span>
+            <span>→</span>
+          </div>
+        </a>
+
+        <!-- Subsystem 4: Community Safety -->
+        <a href="community.html" class="p-6 rounded-2xl bg-slate-800/80 border border-slate-700 hover:border-teal-500/60 hover:bg-slate-800 transition group space-y-3 shadow">
+          <div class="w-12 h-12 rounded-xl bg-teal-500/20 border border-teal-500/30 flex items-center justify-center text-teal-400 group-hover:scale-110 transition-transform">
+            <i data-lucide="backpack" class="w-6 h-6"></i>
+          </div>
+          <h3 class="text-base font-bold text-white group-hover:text-teal-400 transition-colors">Community Preparedness</h3>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Visual field guide to early geological warning signs, interactive 72-hour grab-bag checklist, and 3-phase emergency action steps.
+          </p>
+          <div class="text-xs font-semibold text-teal-400 flex items-center space-x-1 pt-2">
+            <span>Build Grab-Bag</span>
+            <span>→</span>
+          </div>
+        </a>
+
+        <!-- Subsystem 5: Citizen Reports -->
+        <a href="reports.html" class="p-6 rounded-2xl bg-slate-800/80 border border-slate-700 hover:border-indigo-500/60 hover:bg-slate-800 transition group space-y-3 shadow">
+          <div class="w-12 h-12 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 group-hover:scale-110 transition-transform">
+            <i data-lucide="camera" class="w-6 h-6"></i>
+          </div>
+          <h3 class="text-base font-bold text-white group-hover:text-indigo-400 transition-colors">Citizen Hazard Reports</h3>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Spot a ground crack or muddy spring? Report field hazards with simulated GPS location tagging and track official SDRF inspection statuses.
+          </p>
+          <div class="text-xs font-semibold text-indigo-400 flex items-center space-x-1 pt-2">
+            <span>Submit a Field Report</span>
+            <span>→</span>
+          </div>
+        </a>
+
+        <!-- Subsystem 6: Cloudburst Simulator -->
+        <a href="telemetry.html" class="p-6 rounded-2xl bg-slate-800/80 border border-slate-700 hover:border-red-500/60 hover:bg-slate-800 transition group space-y-3 shadow">
+          <div class="w-12 h-12 rounded-xl bg-red-500/20 border border-red-500/30 flex items-center justify-center text-red-400 group-hover:scale-110 transition-transform">
+            <i data-lucide="sliders" class="w-6 h-6"></i>
+          </div>
+          <h3 class="text-base font-bold text-white group-hover:text-red-400 transition-colors">Monsoon Threat Simulator</h3>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Adjust precipitation sliders to simulate cloudburst scenarios, watch soil moisture rise, and test how automated sirens and SMS alerts trigger.
+          </p>
+          <div class="text-xs font-semibold text-red-400 flex items-center space-x-1 pt-2">
+            <span>Launch Simulator</span>
+            <span>→</span>
+          </div>
+        </a>
+
+      </div>
+    </section>
+
+    <!-- RECENT DISPATCHES & EMERGENCY FEED -->
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      
+      <!-- Bulletins Summary -->
+      <div class="lg:col-span-8 bg-slate-800/80 rounded-2xl border border-slate-700 p-6 space-y-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-2.5">
+            <i data-lucide="radio" class="w-5 h-5 text-red-400 animate-pulse"></i>
+            <h3 class="text-base font-bold text-white">Live Official Broadcast Bulletins</h3>
+          </div>
+          <a href="alerts.html" class="text-xs text-emerald-400 hover:underline">View All Broadcasts →</a>
+        </div>
+        <div id="recentBulletinsFeed" class="space-y-3">
+          <!-- Injected via JavaScript -->
+        </div>
+      </div>
+
+      <!-- Quick Siren & Alert Test Card -->
+      <div class="lg:col-span-4 bg-gradient-to-br from-slate-800 to-slate-850 rounded-2xl border border-slate-700 p-6 space-y-4">
+        <h3 class="text-sm font-bold text-white flex items-center space-x-2">
+          <i data-lucide="volume-2" class="w-4 h-4 text-amber-400"></i>
+          <span>Emergency System Test</span>
+        </h3>
+        <p class="text-xs text-slate-300 leading-relaxed">
+          Verify that your device can receive emergency alert tones and simulate an incoming cellular broadcast popup.
+        </p>
+
+        <div class="space-y-2 pt-2">
+          <button onclick="toggleEmergencySiren()" class="w-full bg-slate-900 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold py-2.5 px-4 rounded-xl text-xs transition flex items-center justify-center space-x-2">
+            <i data-lucide="bell" class="w-4 h-4 text-amber-400"></i>
+            <span>Test In-Browser Warning Siren</span>
+          </button>
+          <button onclick="openSmsSimulator()" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2.5 px-4 rounded-xl text-xs transition flex items-center justify-center space-x-2 shadow-lg shadow-emerald-500/20">
+            <i data-lucide="smartphone" class="w-4 h-4"></i>
+            <span>Preview Mobile SMS Alert Modal</span>
+          </button>
+        </div>
+
+        <div class="pt-2 text-[11px] text-slate-400 flex items-center space-x-1.5 border-t border-slate-700/60">
+          <i data-lucide="info" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
+          <span>Audio synthesized via Web Audio API; no media files needed.</span>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- EMERGENCY HELPLINES DIRECTORY -->
+    <section id="emergencyHelplines" class="bg-gradient-to-r from-red-950/40 via-slate-850 to-slate-900 rounded-3xl border border-red-900/40 p-6 md:p-8 space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <span class="text-xs font-bold text-red-400 uppercase tracking-wider">Immediate Assistance</span>
+          <h2 class="text-2xl font-black text-white flex items-center space-x-2.5 mt-1">
+            <i data-lucide="phone-forwarded" class="w-6 h-6 text-red-400"></i>
+            <span>Disaster Response Emergency Directory</span>
+          </h2>
+        </div>
+        <div class="flex items-center space-x-2">
+          <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-red-500/20 text-red-300 border border-red-500/30">
+            <span class="w-2 h-2 rounded-full bg-red-400 animate-ping mr-2"></span>
+            24/7 National & State Hotlines Active
+          </span>
+        </div>
+      </div>
+
+      <div id="emergencyContactsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- Injected via JavaScript -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- SHARED MOBILE SMS ALERT SIMULATOR MODAL -->
+  <div id="smsModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="relative w-full max-w-sm">
+      <button onclick="closeSmsSimulator()" class="absolute -top-10 right-0 text-slate-400 hover:text-white p-2" title="Close">
+        <i data-lucide="x" class="w-6 h-6"></i>
+      </button>
+
+      <div class="phone-screen bg-slate-950 border-4 border-slate-700 text-white rounded-[40px] p-4 shadow-2xl relative">
+        <div class="w-28 h-4 bg-slate-800 rounded-full mx-auto mb-3 flex items-center justify-center space-x-2">
+          <div class="w-2 h-2 rounded-full bg-slate-900"></div>
+          <div class="w-8 h-1 rounded-full bg-slate-700"></div>
+        </div>
+
+        <div class="space-y-4 pt-1 pb-2">
+          <div class="flex justify-between text-[11px] text-slate-400 font-mono px-1">
+            <span id="phoneClock">11:45 AM</span>
+            <div class="flex items-center space-x-1.5">
+              <i data-lucide="wifi" class="w-3 h-3"></i>
+              <i data-lucide="battery-charging" class="w-3.5 h-3.5 text-emerald-400"></i>
+            </div>
+          </div>
+
+          <div id="phoneAlertCard" class="bg-red-600 text-white rounded-2xl p-4 shadow-xl space-y-2.5 vibrate-alert">
+            <div class="flex items-center justify-between text-xs font-bold">
+              <span class="flex items-center space-x-1.5">
+                <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+                <span>EMERGENCY ALERT: LANDSLIDE WARNING</span>
+              </span>
+              <span class="text-[10px] opacity-80">NOW</span>
+            </div>
+            
+            <p id="phoneAlertMsg" class="text-xs leading-relaxed font-medium">
+              LandGuard System: Critical slope movement and 76.4% soil saturation at North Ridge. Evacuate to Govt School Safe Shelter immediately!
+            </p>
+
+            <div class="text-[10px] opacity-90 font-mono bg-red-700/60 p-1.5 rounded">
+              Sender: DISASTER-GOVT-ALERT | Cell Broadcast #HP-401
+            </div>
+          </div>
+
+          <div class="bg-slate-900 rounded-2xl p-3 space-y-2 border border-slate-800 text-xs">
+            <div class="text-[10px] text-center text-slate-400 border-b border-slate-800 pb-1">SMS Thread: LandGuard Early Warning</div>
+            <div class="space-y-2">
+              <div class="bg-slate-800 rounded-xl p-2 text-[11px] text-slate-200">
+                <span class="font-bold text-amber-400 block mb-0.5">Advisory Notice:</span>
+                Rainfall heavy in Sector 4. Saturated soil warning. Keep family go-bags packed.
+              </div>
+              <div class="bg-red-950/80 border border-red-800 rounded-xl p-2 text-[11px] text-red-200">
+                <span class="font-bold text-red-400 block mb-0.5">PRIORITY EVACUATION:</span>
+                Tipping threshold exceeded. Head to Higher Secondary School Auditorium Shelter on High Plateau.
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-2 pt-2">
+            <button onclick="citizenConfirmSafe()" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2 rounded-xl text-xs transition flex items-center justify-center space-x-1.5">
+              <i data-lucide="check" class="w-4 h-4"></i>
+              <span>Reply: "I & My Family Are Safe"</span>
+            </button>
+            <button onclick="citizenRequestRescue()" class="w-full bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-300 font-bold py-2 rounded-xl text-xs transition flex items-center justify-center space-x-1.5">
+              <i data-lucide="life-buoy" class="w-4 h-4 text-red-400"></i>
+              <span>Reply: "Need SOS Evacuation Transport"</span>
+            </button>
+          </div>
+
+          <div id="phoneReplyConfirmation" class="hidden text-center text-xs font-semibold text-emerald-400 py-1">
+            Status reported to Central Disaster Cell.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- UNIFIED FOOTER -->
+  <footer class="bg-slate-950 border-t border-slate-800 py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 text-xs text-slate-400">
+      <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="text-base font-black text-white">LandGuard System</span>
+            <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-[10px] font-bold">v2.4 Production</span>
+          </div>
+          <p class="text-slate-400 mt-1">Autonomous Geohazard Monitoring & Community Warning Infrastructure</p>
+        </div>
+        <div class="flex flex-wrap gap-4 text-xs">
+          <a href="index.html" class="hover:text-white transition">Home</a>
+          <a href="alerts.html" class="hover:text-white transition">Alerts & SMS</a>
+          <a href="map.html" class="hover:text-white transition">Hazard Map</a>
+          <a href="telemetry.html" class="hover:text-white transition">Sensors</a>
+          <a href="community.html" class="hover:text-white transition">Community</a>
+          <a href="reports.html" class="hover:text-white transition">Reports</a>
+        </div>
+      </div>
+      <div class="border-t border-slate-800/80 pt-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-slate-400">
+        <span>Developed for Hillside Settlements and Disaster Management Authorities.</span>
+        <span>Soil Moisture Telemetry • Cellular SMS Broadcasts • Leaflet GIS</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="data/mock_telemetry.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

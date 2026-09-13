@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LandGuard - Citizen Hazard Reporting & Community Field Observations</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            guard: {
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="styles.css">
+
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+  </style>
+</head>
+<body data-page="reports" class="bg-slate-900 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-amber-500 selection:text-slate-950">
+
+  <!-- TOP EMERGENCY MARQUEE BANNER -->
+  <aside aria-label="Emergency Alerts" id="emergencyBanner" class="bg-amber-500 text-slate-950 px-4 py-2 text-xs md:text-sm font-semibold flex items-center justify-between shadow-md transition-colors duration-500">
+    <div class="flex items-center space-x-2 max-w-6xl mx-auto flex-1 truncate">
+      <span class="inline-flex items-center justify-center p-1 bg-slate-950 text-amber-400 rounded-md">
+        <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+      </span>
+      <span class="font-bold tracking-wider uppercase text-[11px] bg-slate-950/10 px-2 py-0.5 rounded" id="bannerRiskBadge">ADVISORY</span>
+      <span id="bannerText" class="truncate">
+        Citizen Science Portal: 3 new ground fissure observations verified by State Disaster Response teams today.
+      </span>
+    </div>
+    <div class="flex items-center space-x-3 text-xs pl-2">
+      <button id="btnSirenToggle" class="flex items-center space-x-1.5 bg-slate-950 text-white px-2.5 py-1 rounded hover:bg-slate-800 transition shadow">
+        <i data-lucide="volume-2" class="w-3.5 h-3.5 text-amber-400"></i>
+        <span id="sirenBtnText">Test Siren</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- UNIFIED NAVIGATION BAR -->
+  <header class="sticky top-0 z-40 bg-slate-900/95 backdrop-blur border-b border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      
+      <a href="index.html" class="flex items-center space-x-3 group">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 via-teal-500 to-amber-400 flex items-center justify-center text-slate-950 shadow-lg shadow-emerald-950/30 group-hover:scale-105 transition-transform">
+          <i data-lucide="shield-alert" class="w-6 h-6 stroke-[2.2]"></i>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="text-xl font-black tracking-tight text-white">Land<span class="text-emerald-400">Guard</span></span>
+            <span class="px-1.5 py-0.5 text-[10px] font-bold uppercase rounded bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">Citizen Science</span>
+          </div>
+          <p class="text-[11px] text-slate-400 hidden sm:block">Crowd-Sourced Hazard Reporting & Verification</p>
+        </div>
+      </a>
+
+      <nav class="hidden lg:flex items-center space-x-1 bg-slate-800/80 p-1 rounded-xl border border-slate-700/60 text-xs font-semibold">
+        <a href="index.html" data-nav-target="index" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition">Home</a>
+        <a href="alerts.html" data-nav-target="alerts" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition">Alerts & SMS</a>
+        <a href="map.html" data-nav-target="map" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition">Hazard Map</a>
+        <a href="telemetry.html" data-nav-target="telemetry" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition">Sensor Telemetry</a>
+        <a href="community.html" data-nav-target="community" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition">Community Safety</a>
+        <a href="reports.html" data-nav-target="reports" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition">Citizen Reports</a>
+      </nav>
+
+      <div class="flex items-center space-x-2.5">
+        <button onclick="openSmsSimulator()" class="flex items-center space-x-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-medium transition shadow-sm">
+          <i data-lucide="smartphone" class="w-3.5 h-3.5 text-amber-400"></i>
+          <span>Test SMS</span>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Mobile Nav -->
+    <div class="lg:hidden border-t border-slate-800 px-4 py-2 flex items-center justify-between overflow-x-auto text-xs font-medium space-x-2">
+      <a href="index.html" class="px-2.5 py-1 rounded-md text-slate-300 whitespace-nowrap">Home</a>
+      <a href="alerts.html" class="px-2.5 py-1 rounded-md text-slate-300 whitespace-nowrap">Alerts</a>
+      <a href="map.html" class="px-2.5 py-1 rounded-md text-slate-300 whitespace-nowrap">Map</a>
+      <a href="telemetry.html" class="px-2.5 py-1 rounded-md text-slate-300 whitespace-nowrap">Sensors</a>
+      <a href="community.html" class="px-2.5 py-1 rounded-md text-slate-300 whitespace-nowrap">Safety</a>
+      <a href="reports.html" class="px-2.5 py-1 rounded-md text-emerald-400 whitespace-nowrap">Reports</a>
+    </div>
+  </header>
+
+  <!-- MAIN REPORTS CONTAINER -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+    <!-- Header Section -->
+    <div class="border-b border-slate-800 pb-6">
+      <h1 class="text-2xl sm:text-3xl font-black text-white flex items-center space-x-2.5">
+        <i data-lucide="camera" class="w-8 h-8 text-indigo-400"></i>
+        <span>Citizen Hazard Reporting & Field Observations</span>
+      </h1>
+      <p class="text-xs sm:text-sm text-slate-400 mt-1 max-w-3xl">
+        Spot an expanding ground crack, tilting utility pole, or bulging retaining wall? Report it directly to district disaster engineers with GPS coordinates and photos to initiate rapid field validation.
+      </p>
+    </div>
+
+    <!-- Submit Form & Feed Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      
+      <!-- Submission Form (Left) -->
+      <div class="lg:col-span-5 space-y-6">
+        <div class="bg-slate-800/80 rounded-2xl border border-slate-700 p-6 space-y-4 shadow-xl">
+          <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+            <h2 class="text-base font-bold text-white flex items-center space-x-2">
+              <i data-lucide="file-plus" class="w-4 h-4 text-emerald-400"></i>
+              <span>Report a Slope Precursor</span>
+            </h2>
+            <span class="text-[10px] font-mono text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded">GPS Enabled</span>
+          </div>
+
+          <form id="citizenReportForm" class="space-y-3.5">
+            <div>
+              <label for="repName" class="block text-xs font-semibold text-slate-300 mb-1">Your Name / Village Ward</label>
+              <input 
+                type="text" 
+                id="repName" 
+                required 
+                placeholder="e.g. Ramesh Singh (Ward 3)" 
+                class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs sm:text-sm text-white focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <label for="repLocation" class="block text-xs font-semibold text-slate-300">Hazard Location & Landmark</label>
+                <button type="button" onclick="autoDetectLocation()" class="text-[11px] text-emerald-400 hover:underline flex items-center space-x-1">
+                  <i data-lucide="crosshair" class="w-3 h-3"></i>
+                  <span>Auto-Detect GPS</span>
+                </button>
+              </div>
+              <input 
+                type="text" 
+                id="repLocation" 
+                required 
+                placeholder="e.g. Near Water Tank, Upper North Ridge" 
+                class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs sm:text-sm text-white focus:outline-none focus:border-emerald-500 font-mono"
+              />
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label for="repHazardType" class="block text-xs font-semibold text-slate-300 mb-1">Hazard Type</label>
+                <select id="repHazardType" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500">
+                  <option value="Ground Fissure">Ground Fissure / Tension Crack</option>
+                  <option value="Tilted Pine Trees">Tilted Trees / Power Poles</option>
+                  <option value="Muddy Spring Seepage">Muddy Spring Seepage</option>
+                  <option value="Retaining Wall Bulge">Retaining Wall Bulge</option>
+                  <option value="Rockfall Debris">Rockfall on Highway</option>
+                </select>
+              </div>
+
+              <div>
+                <label for="repSeverity" class="block text-xs font-semibold text-slate-300 mb-1">Urgency Level</label>
+                <select id="repSeverity" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500">
+                  <option value="High">High (Expanding Rapidly)</option>
+                  <option value="Moderate">Moderate (Appeared After Rain)</option>
+                  <option value="Low">Low (Initial Observation)</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label for="repDesc" class="block text-xs font-semibold text-slate-300 mb-1">Observation Details</label>
+              <textarea 
+                id="repDesc" 
+                rows="3" 
+                required 
+                placeholder="Approximate crack length, width in inches, water seepage direction, whether nearby homes are in downslope line..." 
+                class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+              ></textarea>
+            </div>
+
+            <!-- Simulated Photo Upload Box -->
+            <div class="border-2 border-dashed border-slate-700 rounded-xl p-3 text-center text-xs text-slate-400 space-y-1 hover:border-slate-500 transition cursor-pointer">
+              <i data-lucide="image" class="w-5 h-5 mx-auto text-slate-400"></i>
+              <div class="text-[11px] font-medium text-slate-300">Tap to attach photo of the ground crack</div>
+              <div class="text-[10px] text-slate-500">Simulated camera & file upload enabled</div>
+            </div>
+
+            <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2.5 rounded-xl text-xs sm:text-sm transition flex items-center justify-center space-x-2 shadow-lg shadow-emerald-500/20">
+              <i data-lucide="send" class="w-4 h-4"></i>
+              <span>Submit Hazard Report to SDRF</span>
+            </button>
+          </form>
+
+          <div id="reportSubmittedSuccess" class="hidden p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center space-x-2">
+            <i data-lucide="check" class="w-4 h-4 text-emerald-400"></i>
+            <span>Report logged! Dispatched to District Geotechnical Cell.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Feed of Citizen Reports (Right) -->
+      <div class="lg:col-span-7 space-y-4">
+        
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 class="text-base font-bold text-white flex items-center space-x-2">
+              <i data-lucide="list-filter" class="w-5 h-5 text-emerald-400"></i>
+              <span>Community Field Observations Feed</span>
+            </h2>
+            <p class="text-xs text-slate-400">Reports submitted by local residents and forest wardens</p>
+          </div>
+
+          <!-- Filter buttons -->
+          <div class="flex items-center space-x-1 text-xs">
+            <button onclick="loadAndRenderCitizenReports('all')" class="px-2.5 py-1 rounded-lg bg-emerald-500 text-slate-950 font-bold">All Reports</button>
+            <button onclick="loadAndRenderCitizenReports('verified')" class="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 hover:text-white font-medium">Verified</button>
+            <button onclick="loadAndRenderCitizenReports('high')" class="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 hover:text-white font-medium">High Hazard</button>
+          </div>
+        </div>
+
+        <div id="citizenReportsList" class="space-y-3.5 max-h-[640px] overflow-y-auto pr-1">
+          <!-- Injected via JavaScript -->
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- SHARED MOBILE SMS ALERT SIMULATOR MODAL -->
+  <div id="smsModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="relative w-full max-w-sm">
+      <button onclick="closeSmsSimulator()" class="absolute -top-10 right-0 text-slate-400 hover:text-white p-2" title="Close">
+        <i data-lucide="x" class="w-6 h-6"></i>
+      </button>
+
+      <div class="phone-screen bg-slate-950 border-4 border-slate-700 text-white rounded-[40px] p-4 shadow-2xl relative">
+        <div class="w-28 h-4 bg-slate-800 rounded-full mx-auto mb-3 flex items-center justify-center space-x-2">
+          <div class="w-2 h-2 rounded-full bg-slate-900"></div>
+          <div class="w-8 h-1 rounded-full bg-slate-700"></div>
+        </div>
+
+        <div class="space-y-4 pt-1 pb-2">
+          <div class="flex justify-between text-[11px] text-slate-400 font-mono px-1">
+            <span id="phoneClock">11:45 AM</span>
+            <div class="flex items-center space-x-1.5">
+              <i data-lucide="wifi" class="w-3 h-3"></i>
+              <i data-lucide="battery-charging" class="w-3.5 h-3.5 text-emerald-400"></i>
+            </div>
+          </div>
+
+          <div id="phoneAlertCard" class="bg-red-600 text-white rounded-2xl p-4 shadow-xl space-y-2.5 vibrate-alert">
+            <div class="flex items-center justify-between text-xs font-bold">
+              <span class="flex items-center space-x-1.5">
+                <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+                <span>EMERGENCY ALERT: LANDSLIDE WARNING</span>
+              </span>
+              <span class="text-[10px] opacity-80">NOW</span>
+            </div>
+            
+            <p id="phoneAlertMsg" class="text-xs leading-relaxed font-medium">
+              LandGuard System: Critical slope movement and 76.4% soil saturation at North Ridge. Evacuate to Govt School Safe Shelter immediately!
+            </p>
+
+            <div class="text-[10px] opacity-90 font-mono bg-red-700/60 p-1.5 rounded">
+              Sender: DISASTER-GOVT-ALERT | Cell Broadcast #HP-401
+            </div>
+          </div>
+
+          <div class="bg-slate-900 rounded-2xl p-3 space-y-2 border border-slate-800 text-xs">
+            <div class="text-[10px] text-center text-slate-400 border-b border-slate-800 pb-1">SMS Thread: LandGuard Early Warning</div>
+            <div class="space-y-2">
+              <div class="bg-slate-800 rounded-xl p-2 text-[11px] text-slate-200">
+                <span class="font-bold text-amber-400 block mb-0.5">Advisory Notice:</span>
+                Rainfall heavy in Sector 4. Saturated soil warning. Keep family go-bags packed.
+              </div>
+              <div class="bg-red-950/80 border border-red-800 rounded-xl p-2 text-[11px] text-red-200">
+                <span class="font-bold text-red-400 block mb-0.5">PRIORITY EVACUATION:</span>
+                Tipping threshold exceeded. Head to Higher Secondary School Auditorium Shelter on High Plateau.
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-2 pt-2">
+            <button onclick="citizenConfirmSafe()" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2 rounded-xl text-xs transition flex items-center justify-center space-x-1.5">
+              <i data-lucide="check" class="w-4 h-4"></i>
+              <span>Reply: "I & My Family Are Safe"</span>
+            </button>
+            <button onclick="citizenRequestRescue()" class="w-full bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-300 font-bold py-2 rounded-xl text-xs transition flex items-center justify-center space-x-1.5">
+              <i data-lucide="life-buoy" class="w-4 h-4 text-red-400"></i>
+              <span>Reply: "Need SOS Evacuation Transport"</span>
+            </button>
+          </div>
+
+          <div id="phoneReplyConfirmation" class="hidden text-center text-xs font-semibold text-emerald-400 py-1">
+            Status reported to Central Disaster Cell.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="bg-slate-950 border-t border-slate-800 py-8 mt-auto">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4 text-xs text-slate-400">
+      <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+        <div>
+          <span class="text-white font-bold">LandGuard Citizen Science Subsystem</span>
+          <span>• Community Verification & Geotagged Field Reports</span>
+        </div>
+        <div class="flex space-x-4">
+          <a href="index.html" class="hover:text-white transition">Home</a>
+          <a href="alerts.html" class="hover:text-white transition">Alerts</a>
+          <a href="map.html" class="hover:text-white transition">Map</a>
+          <a href="telemetry.html" class="hover:text-white transition">Sensors</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="data/mock_telemetry.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

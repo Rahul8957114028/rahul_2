@@ -1,0 +1,2816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LandGuard - All-in-One Landslide Early Warning & Community Platform</title>
+  
+  <!-- External CDN Dependencies -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            guard: {
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Fonts & Lucide Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Leaflet Map CSS & JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- INLINED CSS (styles.css) -->
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+    @keyframes radar-pulse {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+      70% { transform: scale(1.15); box-shadow: 0 0 0 16px rgba(239, 68, 68, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    }
+    .radar-ping { animation: radar-pulse 2s infinite cubic-bezier(0.4, 0, 0.6, 1); }
+
+    @keyframes siren-strobe {
+      0%, 100% { opacity: 1; background-color: #ef4444; }
+      50% { opacity: 0.85; background-color: #dc2626; }
+    }
+    .siren-active { animation: siren-strobe 1s infinite; }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+    .leaflet-container { font-family: inherit; border-radius: 0.75rem; background-color: #1e293b; }
+    .leaflet-popup-content-wrapper {
+      background-color: #0f172a !important;
+      color: #f8fafc !important;
+      border-radius: 0.75rem !important;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3) !important;
+      padding: 0 !important;
+      overflow: hidden;
+      border: 1px solid #334155 !important;
+    }
+    .leaflet-popup-content { margin: 0 !important; line-height: 1.4 !important; }
+    .leaflet-popup-tip { background-color: #0f172a !important; }
+
+    .phone-screen {
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      border: 8px solid #1e293b;
+      border-radius: 36px;
+      overflow: hidden;
+    }
+
+    @keyframes emergency-vibe {
+      0%, 100% { transform: translate(0, 0); }
+      20% { transform: translate(-2px, 2px); }
+      40% { transform: translate(2px, -2px); }
+      60% { transform: translate(-2px, -2px); }
+      80% { transform: translate(2px, 2px); }
+    }
+    .vibrate-alert { animation: emergency-vibe 0.3s infinite; }
+
+    .transition-meter { transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.5s ease; }
+    .checklist-checkbox:checked + span { text-decoration: line-through; color: #64748b; }
+
+    /* Single-Page Tab Active Pill */
+    .tab-btn-active {
+      background-color: #10b981 !important;
+      color: #022c22 !important;
+      font-weight: 700 !important;
+      box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.2);
+    }
+
+    /* Animated Evacuation Route Flow (Marching Line) */
+    @keyframes dash-flow {
+      to {
+        stroke-dashoffset: -32;
+      }
+    }
+    .route-flow-line {
+      stroke-dasharray: 8, 8;
+      animation: dash-flow 1.2s linear infinite;
+    }
+    .debris-flow-line {
+      stroke-dasharray: 6, 6;
+      animation: dash-flow 0.8s linear infinite;
+    }
+
+    /* Sonar radar ring for live sensor monitoring */
+    @keyframes sonar-wave {
+      0% { transform: scale(0.6); opacity: 0.9; }
+      100% { transform: scale(2.8); opacity: 0; }
+    }
+    .sonar-ring {
+      animation: sonar-wave 2.2s cubic-bezier(0.1, 0.2, 0.8, 1) infinite;
+    }
+
+    /* Fullscreen Map Mode */
+    .map-fullscreen-active {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      z-index: 9999 !important;
+      border-radius: 0 !important;
+    }
+
+    .custom-leaflet-marker {
+      background: transparent;
+      border: none;
+    }
+
+    #standaloneMap {
+      min-height: 600px;
+    }
+
+    /* Presentation Shaking & Landslide FX */
+    @keyframes screen-shake {
+      0% { transform: translate(0, 0) rotate(0deg); }
+      20% { transform: translate(-3px, 2px) rotate(-0.5deg); }
+      40% { transform: translate(3px, -2px) rotate(0.5deg); }
+      60% { transform: translate(-3px, -1px) rotate(-0.3deg); }
+      80% { transform: translate(2px, 3px) rotate(0.3deg); }
+      100% { transform: translate(0, 0) rotate(0deg); }
+    }
+    .landslide-shaking {
+      animation: screen-shake 0.35s ease-in-out infinite;
+    }
+
+    @keyframes pulse-glow-rose {
+      0%, 100% { box-shadow: 0 0 15px rgba(244, 63, 94, 0.4); }
+      50% { box-shadow: 0 0 28px rgba(244, 63, 94, 0.85); }
+    }
+    .glow-rose {
+      animation: pulse-glow-rose 1.8s infinite;
+    }
+
+    @keyframes warning-strobe {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .flash-warning {
+      animation: warning-strobe 0.8s infinite;
+    }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-amber-500 selection:text-slate-950">
+
+  <!-- TOP EMERGENCY MARQUEE BANNER -->
+  <aside aria-label="Emergency Alerts" id="emergencyBanner" class="bg-amber-500 text-slate-950 px-4 py-2 text-xs md:text-sm font-semibold flex items-center justify-between shadow-md transition-colors duration-500">
+    <div class="flex items-center space-x-2 max-w-6xl mx-auto flex-1 truncate">
+      <span class="inline-flex items-center justify-center p-1 bg-slate-950 text-amber-400 rounded-md">
+        <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+      </span>
+      <span class="font-bold tracking-wider uppercase text-[11px] bg-slate-950/10 px-2 py-0.5 rounded" id="bannerRiskBadge">ADVISORY</span>
+      <span id="bannerText" class="truncate">
+        Single-File Standalone Edition: Soil moisture at 76.4% on North Ridge. Stay alert and review safe shelters.
+      </span>
+    </div>
+    <div class="flex items-center space-x-3 text-xs pl-2">
+      <button id="btnSirenToggle" onclick="toggleEmergencySiren()" class="flex items-center space-x-1.5 bg-slate-950 text-white px-2.5 py-1 rounded hover:bg-slate-800 transition shadow">
+        <i data-lucide="volume-2" class="w-3.5 h-3.5 text-amber-400"></i>
+        <span id="sirenBtnText">Test Siren</span>
+      </button>
+      <button onclick="document.getElementById('emergencyBanner').classList.toggle('hidden')" class="hover:opacity-75 text-slate-950 p-1" title="Dismiss Banner">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+  </aside>
+
+  <!-- UNIFIED NAVIGATION BAR -->
+  <header class="sticky top-0 z-40 bg-slate-900/95 backdrop-blur border-b border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      
+      <!-- Brand Logo -->
+      <div onclick="switchSingleView('viewHome')" class="flex items-center space-x-3 cursor-pointer group">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 via-teal-500 to-amber-400 flex items-center justify-center text-slate-950 shadow-lg shadow-emerald-950/30 group-hover:scale-105 transition-transform">
+          <i data-lucide="shield-alert" class="w-6 h-6 stroke-[2.2]"></i>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="text-xl font-black tracking-tight text-white">Land<span class="text-emerald-400">Guard</span></span>
+            <span class="px-1.5 py-0.5 text-[10px] font-bold uppercase rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">All-In-One</span>
+          </div>
+          <p class="text-[11px] text-slate-400 hidden sm:block">Merged Single-File Comprehensive Web Platform</p>
+        </div>
+      </div>
+
+      <!-- Tab View Switcher -->
+      <nav class="hidden lg:flex items-center space-x-1 bg-slate-800/80 p-1 rounded-xl border border-slate-700/60 text-xs font-semibold">
+        <button id="tabHome" onclick="switchSingleView('viewHome')" class="tab-btn tab-btn-active px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition">Home</button>
+        <button id="tabSimulation" onclick="switchSingleView('viewSimulation')" class="tab-btn px-3 py-1.5 rounded-lg text-rose-400 hover:text-white transition flex items-center space-x-1.5 font-bold border border-rose-500/30 bg-rose-950/40">
+          <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+          <span>🌋 Landslide Sim</span>
+        </button>
+        <button id="tabAlerts" onclick="switchSingleView('viewAlerts')" class="tab-btn px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition">Alerts & SMS</button>
+        <button id="tabMap" onclick="switchSingleView('viewMap')" class="tab-btn px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition">Hazard Map</button>
+        <button id="tabTelemetry" onclick="switchSingleView('viewTelemetry')" class="tab-btn px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition">Sensor Telemetry</button>
+        <button id="tabCommunity" onclick="switchSingleView('viewCommunity')" class="tab-btn px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition">Community Safety</button>
+        <button id="tabReports" onclick="switchSingleView('viewReports')" class="tab-btn px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition">Citizen Reports</button>
+      </nav>
+
+      <!-- Right Action Buttons -->
+      <div class="flex items-center space-x-2.5">
+        <button onclick="startLivePresentationDemo()" class="flex items-center space-x-1.5 bg-gradient-to-r from-rose-600 via-red-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold transition shadow-lg shadow-rose-950/50 glow-rose">
+          <i data-lucide="play-circle" class="w-4 h-4 text-white animate-pulse"></i>
+          <span>🎬 Live Presentation</span>
+        </button>
+        <button onclick="openSmsSimulator()" class="flex items-center space-x-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-medium transition shadow-sm">
+          <i data-lucide="smartphone" class="w-3.5 h-3.5 text-amber-400"></i>
+          <span class="hidden sm:inline">Test SMS</span>
+        </button>
+        <a href="#emergencyHelplines" class="flex items-center space-x-1.5 bg-red-600 hover:bg-red-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-md shadow-red-950/40">
+          <i data-lucide="phone-call" class="w-3.5 h-3.5 animate-pulse"></i>
+          <span>SOS</span>
+        </a>
+      </div>
+
+    </div>
+
+    <!-- Mobile Tab Switcher Bar -->
+    <div class="lg:hidden border-t border-slate-800 px-4 py-2 flex items-center justify-between overflow-x-auto text-xs font-medium space-x-2">
+      <button onclick="switchSingleView('viewHome')" class="px-2.5 py-1 rounded-md text-emerald-400 whitespace-nowrap">Home</button>
+      <button onclick="switchSingleView('viewSimulation')" class="px-2.5 py-1 rounded-md text-rose-400 whitespace-nowrap font-bold">🌋 Landslide Sim</button>
+      <button onclick="switchSingleView('viewAlerts')" class="px-2.5 py-1 rounded-md text-slate-300 whitespace-nowrap">Alerts</button>
+      <button onclick="switchSingleView('viewMap')" class="px-2.5 py-1 rounded-md text-slate-300 whitespace-nowrap">Map</button>
+      <button onclick="switchSingleView('viewTelemetry')" class="px-2.5 py-1 rounded-md text-slate-300 whitespace-nowrap">Sensors</button>
+      <button onclick="switchSingleView('viewCommunity')" class="px-2.5 py-1 rounded-md text-slate-300 whitespace-nowrap">Safety</button>
+      <button onclick="switchSingleView('viewReports')" class="px-2.5 py-1 rounded-md text-slate-300 whitespace-nowrap">Reports</button>
+    </div>
+  </header>
+
+  <!-- FLOATING PRESENTER WALKTHROUGH HUD (Toggled on "Live Presentation") -->
+  <div id="presentationHudBar" class="hidden sticky top-16 z-30 bg-slate-950/95 backdrop-blur-md border-b border-rose-500/40 px-4 py-3 shadow-2xl transition-all">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+      
+      <!-- Stage Indicator & Title -->
+      <div class="flex items-center space-x-3">
+        <div class="w-8 h-8 rounded-xl bg-rose-600 flex items-center justify-center text-white font-black text-sm shadow">
+          🎬
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="text-xs font-black text-white uppercase tracking-wider">Live Presentation Showcase:</span>
+            <span id="presStageBadge" class="text-[11px] font-bold px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/40">
+              Stage 1 / 5: Baseline Slope Condition
+            </span>
+          </div>
+          <p id="presSubtitle" class="text-[11px] text-slate-300 max-w-xl truncate">
+            Stable mountain slope: Factor of Safety = 1.54 (Stable). Geotechnical IoT sensors actively monitoring.
+          </p>
+        </div>
+      </div>
+
+      <!-- Stage Buttons -->
+      <div class="flex items-center space-x-1 text-xs">
+        <button onclick="setPresentationStage(1)" class="pres-stage-btn px-2.5 py-1 rounded-lg bg-slate-800 text-slate-200 hover:text-white font-medium border border-slate-700">1. Normal</button>
+        <button onclick="setPresentationStage(2)" class="pres-stage-btn px-2.5 py-1 rounded-lg bg-slate-800 text-slate-200 hover:text-white font-medium border border-slate-700">2. Downpour</button>
+        <button onclick="setPresentationStage(3)" class="pres-stage-btn px-2.5 py-1 rounded-lg bg-slate-800 text-slate-200 hover:text-white font-medium border border-slate-700">3. Fissures</button>
+        <button onclick="setPresentationStage(4)" class="pres-stage-btn px-2.5 py-1 rounded-lg bg-rose-600 text-white hover:bg-rose-500 font-bold shadow">4. COLLAPSE 💥</button>
+        <button onclick="setPresentationStage(5)" class="pres-stage-btn px-2.5 py-1 rounded-lg bg-emerald-600 text-white hover:bg-emerald-500 font-bold shadow">5. Evacuate</button>
+      </div>
+
+      <!-- Playback Controls -->
+      <div class="flex items-center space-x-2">
+        <button id="btnPresAutoPlay" onclick="togglePresentationAutoPlay()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center space-x-1.5 border border-slate-700">
+          <i data-lucide="play" class="w-3.5 h-3.5 text-amber-400"></i>
+          <span id="presAutoPlayText">Auto-Play (45s)</span>
+        </button>
+        <button onclick="closePresentationDemo()" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800" title="Exit Presentation">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+    </div>
+    
+    <!-- Stage Progress Bar -->
+    <div class="w-full bg-slate-900 h-1 mt-2 rounded-full overflow-hidden">
+      <div id="presProgressBar" class="bg-gradient-to-r from-rose-500 to-amber-500 h-1 transition-all duration-700" style="width: 20%"></div>
+    </div>
+  </div>
+
+  <!-- MAIN VIEW CONTAINER -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+    <!-- ================================================================ -->
+    <!-- SECTION 1: HOME OVERVIEW                                         -->
+    <!-- ================================================================ -->
+    <div id="viewHome" class="single-view-section space-y-8">
+      
+      <!-- Hero -->
+      <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-800 via-slate-850 to-slate-900 border border-slate-800 p-6 md:p-10 shadow-2xl">
+        <div class="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none"></div>
+        <div class="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          
+          <div class="lg:col-span-7 space-y-5">
+            <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-slate-800/90 border border-slate-700 text-xs font-medium text-slate-300">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+              <span>All-In-One Unified Portal • Monitored Sector: <strong class="text-white">Shimla Hill Slopes</strong></span>
+            </div>
+
+            <h1 class="text-3xl sm:text-5xl font-black tracking-tight text-white leading-tight">
+              Early Landslide Detection & Instant Community Warnings.
+            </h1>
+
+            <p class="text-slate-300 text-sm sm:text-base leading-relaxed max-w-2xl">
+              Everything in a single standalone file. Live IoT soil moisture analytics, rainfall thresholds, GIS shelter maps, and GSM cellular SMS broadcast simulation.
+            </p>
+
+            <div class="flex flex-wrap gap-3 pt-2">
+              <button onclick="switchSingleView('viewMap')" class="inline-flex items-center space-x-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-5 py-3 rounded-xl text-sm transition shadow-lg shadow-emerald-500/20">
+                <i data-lucide="map-pin" class="w-4 h-4"></i>
+                <span>Open Hazard Map & Shelters</span>
+              </button>
+              <button onclick="switchSingleView('viewAlerts')" class="inline-flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-semibold px-5 py-3 rounded-xl text-sm transition">
+                <i data-lucide="bell-ring" class="w-4 h-4 text-amber-400"></i>
+                <span>Subscribe to Village SMS</span>
+              </button>
+              <button onclick="switchSingleView('viewTelemetry')" class="inline-flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white font-semibold px-4 py-3 rounded-xl text-sm transition">
+                <i data-lucide="activity" class="w-4 h-4 text-blue-400"></i>
+                <span>Sensor Telemetry</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Risk Dial -->
+          <div class="lg:col-span-5 bg-slate-900/90 rounded-2xl border border-slate-700/80 p-6 space-y-5 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+              <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Current Regional Alert Level</span>
+              <span class="text-[11px] font-mono text-emerald-400">Real-Time Sync</span>
+            </div>
+
+            <div class="flex items-center space-x-4">
+              <div class="w-16 h-16 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+                <i data-lucide="alert-circle" class="w-9 h-9"></i>
+              </div>
+              <div>
+                <div class="flex items-center space-x-2">
+                  <span class="text-2xl font-black text-amber-400">ADVISORY</span>
+                  <span class="px-2 py-0.5 text-[10px] font-bold rounded bg-amber-500/20 text-amber-300">Level 2 / 4</span>
+                </div>
+                <p class="text-xs text-slate-300 mt-1 leading-snug">
+                  Soil saturation elevated (76.4%). Continuous rainfall predicted. Keep grab-bags ready.
+                </p>
+              </div>
+            </div>
+
+            <div class="space-y-1.5 pt-1">
+              <div class="flex justify-between text-xs font-medium">
+                <span class="text-slate-400">Landslide Threat Score</span>
+                <span class="font-mono text-amber-400 font-bold">58 / 100</span>
+              </div>
+              <div class="h-3 w-full bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-700">
+                <div class="h-full bg-gradient-to-r from-emerald-500 via-amber-500 to-red-500 rounded-full" style="width: 58%"></div>
+              </div>
+            </div>
+
+            <div class="bg-slate-800/80 rounded-xl p-3.5 text-xs space-y-2 border border-slate-700/50">
+              <div class="font-semibold text-slate-200 flex items-center space-x-1.5">
+                <i data-lucide="shield" class="w-3.5 h-3.5 text-amber-400"></i>
+                <span>Action for Residents:</span>
+              </div>
+              <p class="text-slate-300 text-[11px] leading-relaxed">
+                Check perimeter drainage. Keep battery lanterns charged. Avoid bypass road transit at night.
+              </p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Quick 5 Module Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div onclick="switchSingleView('viewAlerts')" class="p-6 rounded-2xl bg-slate-800/80 border border-slate-700 hover:border-amber-500/60 transition cursor-pointer space-y-3">
+          <div class="w-12 h-12 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400">
+            <i data-lucide="message-square" class="w-6 h-6"></i>
+          </div>
+          <h3 class="text-base font-bold text-white">Alerts & SMS Broadcasts</h3>
+          <p class="text-xs text-slate-300">Subscribe mobile numbers, test phone simulator, and dispatch alerts.</p>
+        </div>
+
+        <div onclick="switchSingleView('viewMap')" class="p-6 rounded-2xl bg-slate-800/80 border border-slate-700 hover:border-emerald-500/60 transition cursor-pointer space-y-3">
+          <div class="w-12 h-12 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+            <i data-lucide="map" class="w-6 h-6"></i>
+          </div>
+          <h3 class="text-base font-bold text-white">Interactive Hazard Map</h3>
+          <p class="text-xs text-slate-300">Full Leaflet GIS mapping with safe shelters and hazard perimeters.</p>
+        </div>
+
+        <div onclick="switchSingleView('viewTelemetry')" class="p-6 rounded-2xl bg-slate-800/80 border border-slate-700 hover:border-blue-500/60 transition cursor-pointer space-y-3">
+          <div class="w-12 h-12 rounded-xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-400">
+            <i data-lucide="activity" class="w-6 h-6"></i>
+          </div>
+          <h3 class="text-base font-bold text-white">IoT Sensor Telemetry</h3>
+          <p class="text-xs text-slate-300">Multi-depth soil moisture graphs, rain gauge, FoS calculator, and CSV export.</p>
+        </div>
+
+        <div onclick="switchSingleView('viewCommunity')" class="p-6 rounded-2xl bg-slate-800/80 border border-slate-700 hover:border-teal-500/60 transition cursor-pointer space-y-3">
+          <div class="w-12 h-12 rounded-xl bg-teal-500/20 border border-teal-500/30 flex items-center justify-center text-teal-400">
+            <i data-lucide="backpack" class="w-6 h-6"></i>
+          </div>
+          <h3 class="text-base font-bold text-white">Community Safety & Grab-Bag</h3>
+          <p class="text-xs text-slate-300">Visual field precursor signs and interactive offline kit checklist.</p>
+        </div>
+
+        <div onclick="switchSingleView('viewReports')" class="p-6 rounded-2xl bg-slate-800/80 border border-slate-700 hover:border-indigo-500/60 transition cursor-pointer space-y-3">
+          <div class="w-12 h-12 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+            <i data-lucide="camera" class="w-6 h-6"></i>
+          </div>
+          <h3 class="text-base font-bold text-white">Citizen Hazard Reports</h3>
+          <p class="text-xs text-slate-300">Report ground fissures with simulated GPS and track SDRF verifications.</p>
+        </div>
+
+        <div onclick="switchSingleView('viewTelemetry')" class="p-6 rounded-2xl bg-slate-800/80 border border-slate-700 hover:border-red-500/60 transition cursor-pointer space-y-3">
+          <div class="w-12 h-12 rounded-xl bg-red-500/20 border border-red-500/30 flex items-center justify-center text-red-400">
+            <i data-lucide="sliders" class="w-6 h-6"></i>
+          </div>
+          <h3 class="text-base font-bold text-white">Cloudburst Threat Simulator</h3>
+          <p class="text-xs text-slate-300">Test rainfall sliders to observe soil moisture saturation and automatic sirens.</p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ================================================================ -->
+    <!-- SECTION 2: ALERTS & NOTIFICATIONS HUB                           -->
+    <!-- ================================================================ -->
+    <div id="viewAlerts" class="single-view-section hidden space-y-8">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+        <div>
+          <h2 class="text-2xl font-black text-white flex items-center space-x-2">
+            <i data-lucide="radio" class="w-6 h-6 text-amber-400"></i>
+            <span>Emergency Alert & Cellular SMS Broadcast System</span>
+          </h2>
+          <p class="text-xs text-slate-400">Automated SMS notifications and priority disaster dispatches</p>
+        </div>
+        <button onclick="openSmsSimulator()" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-3 py-1.5 rounded-lg text-xs transition">
+          Launch Phone Simulator
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div class="lg:col-span-6 space-y-6">
+          <div class="bg-slate-800/80 rounded-2xl border border-slate-700 p-6 space-y-4">
+            <h3 class="text-base font-bold text-white">Subscribe for Village Emergency SMS</h3>
+            <p class="text-xs text-slate-300">Receive priority cellular text alerts even when internet is unavailable.</p>
+
+            <form id="standaloneSmsForm" onsubmit="handleStandaloneSmsSignup(event)" class="space-y-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Mobile Number</label>
+                <div class="relative">
+                  <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 text-xs font-mono">+91</span>
+                  <input type="tel" id="singleSubPhone" required placeholder="98160 12345" class="w-full pl-12 pr-4 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500 font-mono" />
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-300 mb-1">Village Sector</label>
+                  <select id="singleSubVillage" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500">
+                    <option value="North Ridge">North Ridge (Upper Slopes)</option>
+                    <option value="Pine Valley">Pine Valley (Mid-Slope)</option>
+                    <option value="Creek Village">Creek Village (Basin)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-300 mb-1">Channel</label>
+                  <select id="singleSubChannel" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500">
+                    <option value="SMS + WhatsApp">SMS + WhatsApp</option>
+                    <option value="SMS Only">SMS Only</option>
+                  </select>
+                </div>
+              </div>
+              <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2 rounded-xl text-xs transition">
+                Subscribe My Mobile Number
+              </button>
+            </form>
+            <div id="singleSignupSuccess" class="hidden p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs">
+              Number registered! You will receive priority broadcast dispatches.
+            </div>
+          </div>
+        </div>
+
+        <div class="lg:col-span-6 bg-slate-800/80 rounded-2xl border border-slate-700 p-6 space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-base font-bold text-white">Live Dispatched Bulletins</h3>
+            <span class="text-[10px] font-mono bg-red-500/20 text-red-300 px-2 py-0.5 rounded">Official</span>
+          </div>
+          <div id="standaloneBulletinsFeed" class="space-y-3 max-h-[420px] overflow-y-auto pr-1"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================================================================ -->
+    <!-- SECTION 3: ADVANCED GEOHAZARD & TERRAIN GIS MAP (GIS 2.0)        -->
+    <!-- ================================================================ -->
+    <div id="viewMap" class="single-view-section hidden space-y-6">
+      
+      <!-- TOP GIS COMMAND BAR -->
+      <div class="bg-slate-800/90 rounded-2xl border border-slate-700 p-4 space-y-4 shadow-xl">
+        
+        <!-- Top Row: Title, Basemap Switcher & Advanced Tools -->
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center space-x-2">
+              <h2 class="text-xl font-black text-white flex items-center space-x-2">
+                <i data-lucide="map" class="w-5 h-5 text-emerald-400"></i>
+                <span>Advanced Geohazard & Terrain GIS Map</span>
+              </h2>
+              <span class="px-2 py-0.5 text-[10px] font-bold rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Satellite HD</span>
+            </div>
+            <p class="text-xs text-slate-400 mt-0.5">High-resolution topography, slope inclinometer telemetry, debris runoff trajectories, and dynamic shelter routing.</p>
+          </div>
+
+          <!-- Basemap Switcher Buttons -->
+          <div class="flex items-center space-x-1.5 bg-slate-900/90 p-1 rounded-xl border border-slate-700 text-xs">
+            <span class="text-[10px] uppercase font-bold text-slate-400 px-2 hidden sm:inline">Basemap:</span>
+            <button id="bmSatellite" onclick="switchStandaloneBasemap('satellite')" class="px-2.5 py-1 rounded-lg bg-emerald-500 text-slate-950 font-bold transition text-xs flex items-center space-x-1 shadow">
+              <span>🛰️</span>
+              <span class="hidden md:inline">Satellite</span>
+            </button>
+            <button id="bmTopo" onclick="switchStandaloneBasemap('topo')" class="px-2.5 py-1 rounded-lg text-slate-300 hover:text-white font-medium transition text-xs flex items-center space-x-1">
+              <span>🏔️</span>
+              <span class="hidden md:inline">Topographic</span>
+            </button>
+            <button id="bmDark" onclick="switchStandaloneBasemap('dark')" class="px-2.5 py-1 rounded-lg text-slate-300 hover:text-white font-medium transition text-xs flex items-center space-x-1">
+              <span>🌙</span>
+              <span class="hidden md:inline">Tactical Dark</span>
+            </button>
+            <button id="bmStreet" onclick="switchStandaloneBasemap('voyager')" class="px-2.5 py-1 rounded-lg text-slate-300 hover:text-white font-medium transition text-xs flex items-center space-x-1">
+              <span>🗺️</span>
+              <span class="hidden md:inline">Streets</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Bottom Row: Multi-Layer Toggles & Interactive Map Tools -->
+        <div class="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-700/70 text-xs">
+          
+          <!-- Layer Checkboxes -->
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-[11px] font-bold text-slate-400 mr-1">Layers:</span>
+            
+            <label class="flex items-center space-x-1.5 cursor-pointer select-none bg-slate-900/80 px-2.5 py-1 rounded-lg border border-slate-700 hover:border-slate-500 transition">
+              <input type="checkbox" checked onchange="toggleStandaloneLayer('hazards', this.checked)" class="rounded text-red-500 focus:ring-0 bg-slate-800 border-slate-600">
+              <span class="w-2 h-2 rounded-full bg-red-500"></span>
+              <span class="text-slate-200 text-[11px]">Hazard Zones</span>
+            </label>
+
+            <label class="flex items-center space-x-1.5 cursor-pointer select-none bg-slate-900/80 px-2.5 py-1 rounded-lg border border-slate-700 hover:border-slate-500 transition">
+              <input type="checkbox" checked onchange="toggleStandaloneLayer('shelters', this.checked)" class="rounded text-emerald-500 focus:ring-0 bg-slate-800 border-slate-600">
+              <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+              <span class="text-slate-200 text-[11px]">Safe Shelters</span>
+            </label>
+
+            <label class="flex items-center space-x-1.5 cursor-pointer select-none bg-slate-900/80 px-2.5 py-1 rounded-lg border border-slate-700 hover:border-slate-500 transition">
+              <input type="checkbox" checked onchange="toggleStandaloneLayer('stations', this.checked)" class="rounded text-blue-500 focus:ring-0 bg-slate-800 border-slate-600">
+              <span class="w-2 h-2 rounded-full bg-blue-400"></span>
+              <span class="text-slate-200 text-[11px]">Sensors</span>
+            </label>
+
+            <label class="flex items-center space-x-1.5 cursor-pointer select-none bg-slate-900/80 px-2.5 py-1 rounded-lg border border-slate-700 hover:border-slate-500 transition">
+              <input type="checkbox" checked onchange="toggleStandaloneLayer('routes', this.checked)" class="rounded text-emerald-400 focus:ring-0 bg-slate-800 border-slate-600">
+              <span class="w-2 h-2 rounded-full bg-emerald-300"></span>
+              <span class="text-slate-200 text-[11px]">Evacuation Corridors</span>
+            </label>
+
+            <label class="flex items-center space-x-1.5 cursor-pointer select-none bg-slate-900/80 px-2.5 py-1 rounded-lg border border-slate-700 hover:border-slate-500 transition">
+              <input type="checkbox" checked onchange="toggleStandaloneLayer('debris', this.checked)" class="rounded text-orange-500 focus:ring-0 bg-slate-800 border-slate-600">
+              <span class="w-2 h-2 rounded-full bg-orange-400"></span>
+              <span class="text-slate-200 text-[11px]">Debris Flow Gullies</span>
+            </label>
+
+            <label class="flex items-center space-x-1.5 cursor-pointer select-none bg-slate-900/80 px-2.5 py-1 rounded-lg border border-slate-700 hover:border-slate-500 transition">
+              <input type="checkbox" checked onchange="toggleStandaloneLayer('saturation', this.checked)" class="rounded text-cyan-400 focus:ring-0 bg-slate-800 border-slate-600">
+              <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+              <span class="text-slate-200 text-[11px]">Moisture Rings</span>
+            </label>
+          </div>
+
+          <!-- Interactive Action Tools -->
+          <div class="flex items-center space-x-2">
+            <button onclick="triggerMapLandslideDemo()" class="bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition flex items-center space-x-1.5 shadow-md shadow-rose-950/40 glow-rose">
+              <span>🌋</span>
+              <span>Simulate Landslide on Map</span>
+            </button>
+
+            <button onclick="findNearestShelterGPS()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition flex items-center space-x-1.5 shadow-md shadow-emerald-950/40">
+              <i data-lucide="crosshair" class="w-3.5 h-3.5"></i>
+              <span>Find Nearest Safe Shelter</span>
+            </button>
+
+            <button id="btnMeasureTool" onclick="toggleStandaloneMeasurement()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center space-x-1.5">
+              <i data-lucide="ruler" class="w-3.5 h-3.5 text-amber-400"></i>
+              <span id="measureBtnText">Measure Distance</span>
+            </button>
+
+            <button onclick="toggleStandaloneFullscreen()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition" title="Toggle Fullscreen">
+              <i data-lucide="maximize" class="w-3.5 h-3.5"></i>
+            </button>
+
+            <button onclick="resetStandaloneMap()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition" title="Reset View">
+              <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- MAIN MAP & LATERAL INTELLIGENCE GRID -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Full Leaflet Canvas Container -->
+        <div class="lg:col-span-8 bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden shadow-2xl relative" id="standaloneMapCard">
+          
+          <!-- Leaflet Map Element -->
+          <div id="standaloneMap" class="w-full h-[580px] z-10"></div>
+
+          <!-- FLOATING OVERLAY: LIVE 24-HOUR STORM SATURATION SCRUBBER -->
+          <div class="absolute top-4 left-4 right-4 z-20 pointer-events-none">
+            <div class="bg-slate-900/90 backdrop-blur border border-slate-700/80 rounded-2xl p-3 shadow-2xl pointer-events-auto max-w-xl mx-auto flex flex-col sm:flex-row items-center gap-3">
+              
+              <div class="flex items-center space-x-2 shrink-0">
+                <span class="w-2 h-2 rounded-full bg-blue-400 animate-ping"></span>
+                <span class="text-xs font-bold text-white whitespace-nowrap">Storm Scrubber:</span>
+                <span id="standaloneScrubberTime" class="text-xs font-mono text-emerald-400 font-bold bg-slate-950 px-2 py-0.5 rounded border border-slate-800">Now (24h)</span>
+              </div>
+
+              <!-- Slider -->
+              <div class="flex-1 w-full flex items-center space-x-2">
+                <span class="text-[10px] text-slate-400 font-mono">00:00</span>
+                <input 
+                  type="range" 
+                  id="standaloneTimeSlider" 
+                  min="0" 
+                  max="12" 
+                  value="12" 
+                  oninput="handleStandaloneScrubber(this.value)" 
+                  class="w-full accent-emerald-500 cursor-pointer h-1.5 bg-slate-800 rounded-lg appearance-none"
+                />
+                <span class="text-[10px] text-slate-400 font-mono">Peak</span>
+              </div>
+
+              <!-- Calculated Soil Saturation Indicator -->
+              <div class="text-[11px] font-mono shrink-0">
+                Saturation: <strong id="standaloneScrubberSaturation" class="text-amber-400 font-bold">76.4%</strong>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- FLOATING HUD: COORDINATES & ELEVATION -->
+          <div class="absolute bottom-3 left-3 z-20 bg-slate-900/90 backdrop-blur px-3 py-1.5 rounded-xl border border-slate-700 text-xs text-slate-300 shadow flex items-center space-x-3">
+            <div>Center: <span class="font-mono text-emerald-400 font-semibold">31.0980° N, 77.1720° E</span></div>
+            <span class="text-slate-600">•</span>
+            <div>Relief: <span class="font-mono text-amber-400 font-semibold">1,420m down to 740m</span></div>
+          </div>
+
+          <!-- MEASUREMENT RESULT FLOATING BOX -->
+          <div id="standaloneMeasureHud" class="hidden absolute bottom-3 right-3 z-20 bg-slate-900/95 backdrop-blur px-4 py-2 rounded-xl border border-amber-500/60 text-xs shadow-2xl space-y-1">
+            <div class="text-amber-400 font-bold flex items-center space-x-1.5">
+              <i data-lucide="ruler" class="w-3.5 h-3.5"></i>
+              <span>Measurement Tool Active</span>
+            </div>
+            <div id="standaloneMeasureHudText" class="text-slate-200 font-mono text-[11px]">
+              Click 2 points on the terrain to measure distance & slope.
+            </div>
+          </div>
+
+        </div>
+
+        <!-- LATERAL INTELLIGENCE & ROUTING PANE -->
+        <div class="lg:col-span-4 space-y-4">
+          
+          <!-- ROUTING ASSISTANT CARD -->
+          <div id="nearestShelterBox" class="bg-gradient-to-br from-emerald-950/40 via-slate-850 to-slate-900 rounded-2xl border border-emerald-500/40 p-4 space-y-3 shadow-lg">
+            <div class="flex items-center justify-between border-b border-emerald-500/20 pb-2">
+              <div class="flex items-center space-x-1.5">
+                <i data-lucide="navigation" class="w-4 h-4 text-emerald-400 animate-bounce"></i>
+                <h3 class="text-sm font-bold text-white">Nearest Shelter Routing</h3>
+              </div>
+              <span id="standaloneRouteDistanceBadge" class="text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded">
+                Ready
+              </span>
+            </div>
+
+            <div id="standaloneRouteContent" class="text-xs text-slate-300 space-y-2">
+              <p class="text-[11px] text-slate-400 leading-relaxed">
+                Click <strong>"Find Nearest Safe Shelter"</strong> or tap anywhere on the map to plot a safe escape corridor away from active debris gullies.
+              </p>
+              <div class="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 space-y-1 text-[11px]">
+                <div class="text-white font-semibold">Recommended Evacuation Shelter:</div>
+                <div class="text-emerald-400 font-bold">Govt Higher Secondary School Auditorium</div>
+                <div class="text-slate-400">Elevation: 820m (Flat Plateau • 45m above gully)</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- DESIGNATED SHELTERS DIRECTORY -->
+          <div class="bg-slate-800/80 rounded-2xl border border-slate-700 p-4 space-y-3 shadow">
+            <div class="flex items-center justify-between border-b border-slate-700 pb-2">
+              <h3 class="text-sm font-bold text-white flex items-center space-x-1.5">
+                <i data-lucide="shield" class="w-4 h-4 text-emerald-400"></i>
+                <span>Active Safe Shelters</span>
+              </h3>
+              <span class="text-[10px] font-mono bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded font-bold">3 Operational</span>
+            </div>
+
+            <p class="text-[11px] text-slate-400">
+              Click any shelter to zoom into satellite imagery & highlight its arrival corridor:
+            </p>
+
+            <div id="standaloneSheltersList" class="space-y-3 max-h-[220px] overflow-y-auto pr-1"></div>
+          </div>
+
+          <!-- ELEVATION TRANSECT CROSS-SECTION WIDGET -->
+          <div class="bg-slate-800/80 rounded-2xl border border-slate-700 p-4 space-y-3 shadow">
+            <div class="flex items-center justify-between border-b border-slate-700 pb-2">
+              <h3 class="text-xs font-bold text-white flex items-center space-x-1.5">
+                <i data-lucide="trending-down" class="w-3.5 h-3.5 text-amber-400"></i>
+                <span>Slope Elevation Profile (Transect)</span>
+              </h3>
+              <span class="text-[10px] font-mono text-slate-400">680m Drop</span>
+            </div>
+
+            <!-- Elevation Bar Steps -->
+            <div class="space-y-1.5 text-[11px]">
+              <div class="flex items-center justify-between">
+                <span class="text-slate-400">North Ridge Crown (Escarpment):</span>
+                <span class="font-mono text-red-400 font-bold">1,420m (38° - 42°)</span>
+              </div>
+              <div class="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden">
+                <div class="bg-gradient-to-r from-red-500 to-amber-500 h-1.5 rounded-full" style="width: 100%"></div>
+              </div>
+
+              <div class="flex items-center justify-between pt-1">
+                <span class="text-slate-400">Valley Pass Cut Slope (Midway):</span>
+                <span class="font-mono text-amber-400 font-bold">980m (26°)</span>
+              </div>
+              <div class="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden">
+                <div class="bg-gradient-to-r from-amber-500 to-emerald-400 h-1.5 rounded-full" style="width: 65%"></div>
+              </div>
+
+              <div class="flex items-center justify-between pt-1">
+                <span class="text-slate-400">Safe Plateau School Shelter:</span>
+                <span class="font-mono text-emerald-400 font-bold">820m (6° Flat)</span>
+              </div>
+              <div class="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden">
+                <div class="bg-emerald-500 h-1.5 rounded-full" style="width: 40%"></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ================================================================ -->
+    <!-- SECTION 4: SENSOR & TELEMETRY ANALYTICS                         -->
+    <!-- ================================================================ -->
+    <div id="viewTelemetry" class="single-view-section hidden space-y-8">
+      <div class="bg-slate-800/90 rounded-2xl border border-slate-700 p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-xl font-black text-white">IoT Telemetry & Geotechnical Slope Hub</h2>
+          <p class="text-xs text-slate-400">Real-time multi-depth TDR sensors, rain gauge, and tilt inclinometer</p>
+        </div>
+        <div class="flex items-center space-x-2">
+          <select id="singleStationSelect" onchange="changeStandaloneStation(this.value)" class="bg-slate-900 border border-slate-600 rounded-xl text-xs text-white px-3 py-2 font-medium">
+            <option value="station-alpha">Station Alpha - North Ridge (38° Slope)</option>
+            <option value="station-beta">Station Beta - Valley Pass (26° Slope)</option>
+            <option value="station-gamma">Station Gamma - Creek Basin (18° Slope)</option>
+          </select>
+          <button onclick="exportStandaloneCsv()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-2 rounded-xl text-xs font-semibold flex items-center space-x-1">
+            <i data-lucide="download" class="w-3.5 h-3.5 text-emerald-400"></i>
+            <span>CSV</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Live Cards -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-slate-800/80 rounded-2xl border border-slate-700 p-5 space-y-2">
+          <span class="text-xs font-bold text-slate-400 uppercase">Soil Moisture (Core)</span>
+          <div class="flex items-baseline space-x-2">
+            <span id="telMoisture" class="text-3xl font-extrabold text-white font-mono">76.4</span>
+            <span class="text-xs text-slate-400">% VWC</span>
+          </div>
+          <div class="h-2 w-full bg-slate-900 rounded-full overflow-hidden">
+            <div id="telMoistureBar" class="h-full bg-amber-500" style="width: 76.4%"></div>
+          </div>
+        </div>
+
+        <div class="bg-slate-800/80 rounded-2xl border border-slate-700 p-5 space-y-2">
+          <span class="text-xs font-bold text-slate-400 uppercase">Precipitation Rate</span>
+          <div class="flex items-baseline space-x-2">
+            <span id="telRain" class="text-3xl font-extrabold text-white font-mono">38.5</span>
+            <span class="text-xs text-slate-400">mm/h</span>
+          </div>
+          <div class="text-xs text-slate-300">24h Total: <strong class="text-white">124.0 mm</strong></div>
+        </div>
+
+        <div class="bg-slate-800/80 rounded-2xl border border-slate-700 p-5 space-y-2">
+          <span class="text-xs font-bold text-slate-400 uppercase">Slope Tilt Inclinometer</span>
+          <div class="flex items-baseline space-x-2">
+            <span id="telTilt" class="text-3xl font-extrabold text-white font-mono">2.15</span>
+            <span class="text-xs text-slate-400">° Tilt</span>
+          </div>
+          <div class="text-xs text-amber-400">Displacement: +14.2 mm</div>
+        </div>
+
+        <div class="bg-slate-800/80 rounded-2xl border border-slate-700 p-5 space-y-2">
+          <span class="text-xs font-bold text-slate-400 uppercase">Pore Water Pressure</span>
+          <div class="flex items-baseline space-x-2">
+            <span id="telPore" class="text-3xl font-extrabold text-white font-mono">42.8</span>
+            <span class="text-xs text-slate-400">kPa</span>
+          </div>
+          <div class="text-xs text-slate-300">Environment: 16.2°C / 94%</div>
+        </div>
+      </div>
+
+      <!-- Chart -->
+      <div class="bg-slate-800/90 rounded-2xl border border-slate-700 p-6 space-y-4 shadow-xl">
+        <h3 class="text-base font-bold text-white flex items-center space-x-2">
+          <i data-lucide="trending-up" class="w-4 h-4 text-emerald-400"></i>
+          <span>24-Hour Telemetry Correlation: Soil Moisture vs Rainfall</span>
+        </h3>
+        <div class="h-72 w-full">
+          <canvas id="standaloneChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Simulator -->
+      <div class="bg-gradient-to-br from-slate-800 via-slate-850 to-slate-900 rounded-2xl border border-slate-700 p-6 space-y-5 shadow-xl">
+        <h3 class="text-base font-bold text-white flex items-center space-x-2">
+          <i data-lucide="sliders" class="w-5 h-5 text-amber-400"></i>
+          <span>Monsoon Cloudburst Threat Simulator</span>
+        </h3>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="space-y-2">
+            <div class="flex justify-between text-xs font-semibold">
+              <span class="text-slate-300">Rainfall Slider:</span>
+              <span id="simRainText" class="font-mono text-blue-400 font-bold">38.5 mm/h</span>
+            </div>
+            <input type="range" id="standaloneRainSlider" min="0" max="90" value="38" oninput="handleStandaloneSim()" class="w-full accent-blue-500 cursor-pointer h-2 bg-slate-900 rounded-lg appearance-none" />
+          </div>
+          <div class="space-y-2">
+            <div class="flex justify-between text-xs font-semibold">
+              <span class="text-slate-300">Moisture Slider:</span>
+              <span id="simMoistureText" class="font-mono text-amber-400 font-bold">76.4% VWC</span>
+            </div>
+            <input type="range" id="standaloneMoistureSlider" min="30" max="95" value="76" oninput="handleStandaloneSim()" class="w-full accent-amber-500 cursor-pointer h-2 bg-slate-900 rounded-lg appearance-none" />
+          </div>
+        </div>
+
+        <div class="bg-slate-900/90 rounded-xl p-4 border border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div class="flex items-center space-x-3">
+            <div id="standaloneSimBadge" class="px-3 py-1 rounded text-xs font-bold uppercase bg-amber-500/20 text-amber-300 border border-amber-500/40">
+              ADVISORY TIER
+            </div>
+            <div id="standaloneSimFos" class="text-xs font-mono font-bold text-amber-400">
+              Factor of Safety (FoS) = 1.18
+            </div>
+          </div>
+          <button onclick="openSmsSimulator()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-medium px-3.5 py-2 rounded-xl transition">
+            Preview Mobile Alert Popup
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================================================================ -->
+    <!-- SECTION 5: COMMUNITY PREPAREDNESS & GRAB-BAG                    -->
+    <!-- ================================================================ -->
+    <div id="viewCommunity" class="single-view-section hidden space-y-8">
+      <div class="border-b border-slate-800 pb-4">
+        <h2 class="text-2xl font-black text-white flex items-center space-x-2">
+          <i data-lucide="shield-check" class="w-6 h-6 text-teal-400"></i>
+          <span>Community Preparedness & Family Grab-Bag Builder</span>
+        </h2>
+        <p class="text-xs text-slate-400">Checklist saves automatically on your phone for offline access.</p>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div class="lg:col-span-7 bg-slate-800/80 rounded-2xl border border-slate-700 p-6 space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-base font-bold text-white">72-Hour Emergency Grab-Bag Kit</h3>
+            <span id="standaloneChecklistBadge" class="text-xs font-mono font-bold bg-teal-500/20 text-teal-300 px-3 py-1 rounded-full">0/6 Packed</span>
+          </div>
+          <div id="standaloneChecklistItems" class="space-y-2.5"></div>
+        </div>
+
+        <div class="lg:col-span-5 bg-slate-800/80 rounded-2xl border border-slate-700 p-6 space-y-4">
+          <h3 class="text-base font-bold text-white">Recognizing Slope Warning Signs</h3>
+          <div class="space-y-3 text-xs text-slate-300">
+            <div class="p-3 bg-slate-900 rounded-xl border border-slate-700">
+              <strong class="text-amber-400 block mb-1">1. Ground Fissures:</strong>
+              New tension cracks appearing across driveway asphalt or retaining walls.
+            </div>
+            <div class="p-3 bg-slate-900 rounded-xl border border-slate-700">
+              <strong class="text-amber-400 block mb-1">2. Tilted Trees & Poles:</strong>
+              Pine trees or utility poles tilting downhill indicates creeping soil.
+            </div>
+            <div class="p-3 bg-slate-900 rounded-xl border border-slate-700">
+              <strong class="text-amber-400 block mb-1">3. Murky Spring Discharge:</strong>
+              Sudden dirtying of clear mountain springs with red/brown silt.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================================================================ -->
+    <!-- SECTION 6: CITIZEN HAZARD REPORTING                             -->
+    <!-- ================================================================ -->
+    <div id="viewReports" class="single-view-section hidden space-y-8">
+      <div class="border-b border-slate-800 pb-4">
+        <h2 class="text-2xl font-black text-white flex items-center space-x-2">
+          <i data-lucide="camera" class="w-6 h-6 text-indigo-400"></i>
+          <span>Citizen Hazard Reporting & Field Observations</span>
+        </h2>
+        <p class="text-xs text-slate-400">Crowd-sourced hazard mapping with GPS tagging and verification.</p>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div class="lg:col-span-5 bg-slate-800/80 rounded-2xl border border-slate-700 p-6 space-y-4">
+          <h3 class="text-base font-bold text-white">Report a Slope Precursor</h3>
+          <form onsubmit="handleStandaloneReportSubmit(event)" class="space-y-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Your Name</label>
+              <input type="text" id="reportName" required placeholder="e.g. Ramesh Thakur" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Location & Landmark</label>
+              <input type="text" id="reportLoc" required placeholder="e.g. North Ridge Road km 4.2" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white" />
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Hazard Type</label>
+                <select id="reportType" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white">
+                  <option value="Ground Fissure">Ground Fissure</option>
+                  <option value="Tilted Trees">Tilted Trees</option>
+                  <option value="Muddy Spring">Muddy Spring</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Severity</label>
+                <select id="reportSev" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white">
+                  <option value="High">High</option>
+                  <option value="Moderate">Moderate</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Observation Details</label>
+              <textarea id="reportDetails" rows="2" required placeholder="Describe crack width, water seepage, etc." class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white"></textarea>
+            </div>
+            <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2 rounded-xl text-xs transition">
+              Submit Field Observation
+            </button>
+          </form>
+          <div id="reportSuccess" class="hidden p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs">
+            Observation logged! Dispatched to SDRF Field Team.
+          </div>
+        </div>
+
+        <div class="lg:col-span-7 bg-slate-800/80 rounded-2xl border border-slate-700 p-6 space-y-4">
+          <h3 class="text-base font-bold text-white">Verified Community Observations</h3>
+          <div id="standaloneReportsFeed" class="space-y-3 max-h-[460px] overflow-y-auto pr-1"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================================================================ -->
+    <!-- SECTION 7: LIVE LANDSLIDE SIMULATION & PRESENTATION STUDIO      -->
+    <!-- ================================================================ -->
+    <div id="viewSimulation" class="single-view-section hidden space-y-6">
+      
+      <!-- TOP CONTROL & STATUS HEADER -->
+      <div class="bg-gradient-to-br from-slate-800 via-slate-850 to-slate-900 rounded-3xl border border-slate-700 p-6 shadow-2xl space-y-5">
+        
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center space-x-2.5">
+              <span class="w-3 h-3 rounded-full bg-rose-500 animate-ping"></span>
+              <h2 class="text-2xl font-black text-white flex items-center space-x-2">
+                <span>🌋 Live Mountain Slope Rupture & Landslide Physics Studio</span>
+              </h2>
+              <span class="px-2.5 py-0.5 text-xs font-bold rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/40">
+                Mohr-Coulomb Failure Model
+              </span>
+            </div>
+            <p class="text-xs text-slate-300 mt-1 max-w-3xl leading-relaxed">
+              Real-time finite-slice geotechnical slope stability simulation. Observe precipitation infiltration, groundwater rise, pore-water pressure liquefaction, and trigger live catastrophic mass wasting events with earth rumble audio and automated emergency alerts.
+            </p>
+          </div>
+
+          <!-- Quick Scenario Presets for Presentation -->
+          <div class="flex flex-wrap items-center gap-1.5 bg-slate-900/90 p-1.5 rounded-2xl border border-slate-700 text-xs">
+            <span class="text-[10px] font-bold text-slate-400 uppercase px-2">Presets:</span>
+            <button onclick="loadSimScenario('dry')" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium transition flex items-center space-x-1">
+              <span>☀️</span>
+              <span>1. Stable</span>
+            </button>
+            <button onclick="loadSimScenario('rain')" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium transition flex items-center space-x-1">
+              <span>🌧️</span>
+              <span>2. Infiltration</span>
+            </button>
+            <button onclick="loadSimScenario('warning')" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium transition flex items-center space-x-1">
+              <span>⚠️</span>
+              <span>3. Tension Creep</span>
+            </button>
+            <button onclick="loadSimScenario('collapse')" class="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-black transition flex items-center space-x-1 shadow-md shadow-rose-950/50 glow-rose">
+              <span>💥</span>
+              <span>4. COLLAPSE!</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- LIVE GEOTECHNICAL TELEMETRY GAUGES -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 pt-2 border-t border-slate-700/80">
+          
+          <div class="bg-slate-900/80 rounded-2xl p-3 border border-slate-800 space-y-1">
+            <span class="text-[10px] uppercase font-bold text-slate-400 block">Factor of Safety (FoS)</span>
+            <div class="flex items-baseline space-x-1.5">
+              <span id="canvasFosVal" class="text-2xl font-black font-mono text-emerald-400">1.54</span>
+              <span id="canvasFosStatus" class="text-[10px] font-bold uppercase text-emerald-300">Stable</span>
+            </div>
+            <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+              <div id="canvasFosBar" class="h-full bg-emerald-500 transition-all duration-300" style="width: 77%"></div>
+            </div>
+          </div>
+
+          <div class="bg-slate-900/80 rounded-2xl p-3 border border-slate-800 space-y-1">
+            <span class="text-[10px] uppercase font-bold text-slate-400 block">Pore Water Press. (u)</span>
+            <div class="flex items-baseline space-x-1">
+              <span id="canvasPoreVal" class="text-2xl font-black font-mono text-blue-400">22.4</span>
+              <span class="text-xs text-slate-400">kPa</span>
+            </div>
+            <div class="text-[10px] text-slate-400">Shear plane hydrostatic load</div>
+          </div>
+
+          <div class="bg-slate-900/80 rounded-2xl p-3 border border-slate-800 space-y-1">
+            <span class="text-[10px] uppercase font-bold text-slate-400 block">Soil Saturation</span>
+            <div class="flex items-baseline space-x-1">
+              <span id="canvasSatVal" class="text-2xl font-black font-mono text-cyan-400">58.0</span>
+              <span class="text-xs text-slate-400">% VWC</span>
+            </div>
+            <div class="text-[10px] text-slate-400">Permeable clay-loam depth</div>
+          </div>
+
+          <div class="bg-slate-900/80 rounded-2xl p-3 border border-slate-800 space-y-1">
+            <span class="text-[10px] uppercase font-bold text-slate-400 block">Precipitation Rate</span>
+            <div class="flex items-baseline space-x-1">
+              <span id="canvasRainVal" class="text-2xl font-black font-mono text-indigo-400">12.0</span>
+              <span class="text-xs text-slate-400">mm/h</span>
+            </div>
+            <div class="text-[10px] text-slate-400">Peak infiltration rate</div>
+          </div>
+
+          <div class="bg-slate-900/80 rounded-2xl p-3 border border-slate-800 space-y-1">
+            <span class="text-[10px] uppercase font-bold text-slate-400 block">Inclinometer Creep</span>
+            <div class="flex items-baseline space-x-1">
+              <span id="canvasTiltVal" class="text-2xl font-black font-mono text-amber-400">0.35</span>
+              <span class="text-xs text-slate-400">° Tilt</span>
+            </div>
+            <div class="text-[10px] text-slate-400">Bedrock anchor displacement</div>
+          </div>
+
+          <div class="bg-slate-900/80 rounded-2xl p-3 border border-slate-800 space-y-1">
+            <span class="text-[10px] uppercase font-bold text-slate-400 block">System Alarm Status</span>
+            <div id="canvasAlarmBadge" class="text-xs font-black uppercase text-emerald-400 py-1 flex items-center space-x-1">
+              <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+              <span>NORMAL</span>
+            </div>
+            <div class="text-[10px] text-slate-400">Auto-dispatch armed</div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- MAIN CANVAS & SIMULATOR CONTROLS GRID -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Left: Physical 2.5D Cross-Section Canvas -->
+        <div class="lg:col-span-8 bg-slate-800 rounded-3xl border border-slate-700 overflow-hidden shadow-2xl relative" id="landslideSimCard">
+          
+          <!-- Canvas Top Bar -->
+          <div class="bg-slate-900/90 px-4 py-2.5 border-b border-slate-700/80 flex items-center justify-between text-xs">
+            <div class="flex items-center space-x-2 text-slate-300">
+              <span class="font-bold text-white">Terrain Transect:</span>
+              <span>North Ridge Crown (1,420m) → Bypass Road Cut → Creek Basin</span>
+            </div>
+            <div class="flex items-center space-x-2 text-[11px]">
+              <span class="flex items-center space-x-1"><span class="w-2 h-2 rounded-full bg-slate-600"></span><span class="text-slate-400">Granite Bedrock</span></span>
+              <span class="flex items-center space-x-1"><span class="w-2 h-2 rounded-full bg-amber-600"></span><span class="text-slate-400">Saturated Soil Mass</span></span>
+              <span class="flex items-center space-x-1"><span class="w-2 h-2 rounded-full bg-emerald-400"></span><span class="text-slate-400">Safe Shelter</span></span>
+            </div>
+          </div>
+
+          <!-- HTML5 Physics Canvas -->
+          <div class="relative w-full overflow-hidden bg-slate-950">
+            <canvas id="landslideCanvas" width="860" height="460" class="w-full h-auto block"></canvas>
+            
+            <!-- Floating Overlay: Geological Failure Banner -->
+            <div id="canvasEventBanner" class="hidden absolute top-4 left-4 right-4 z-20 pointer-events-none">
+              <div class="bg-red-600/90 backdrop-blur text-white px-4 py-3 rounded-2xl shadow-2xl border border-white/20 flex items-center justify-between pointer-events-auto">
+                <div class="flex items-center space-x-3">
+                  <span class="text-2xl animate-bounce">⚠️</span>
+                  <div>
+                    <h4 class="text-sm font-black uppercase tracking-wider">CATASTROPHIC SLOPE COLLAPSE IN PROGRESS!</h4>
+                    <p class="text-xs text-red-100">Shear stress exceeded friction angle along slip plane. 4,200m³ debris surging down North Ravine.</p>
+                  </div>
+                </div>
+                <button onclick="openSmsSimulator('EMERGENCY ALERT: Landslide rupture active on North Ridge! Road KM 4.2 blocked. Evacuate along green ridge bypass now!')" class="bg-slate-950 hover:bg-slate-900 text-white font-bold px-3 py-1.5 rounded-xl text-xs shadow">
+                  View Emergency Dispatch
+                </button>
+              </div>
+            </div>
+
+            <!-- Sound & Shaking Toggle Indicator -->
+            <div class="absolute bottom-3 right-3 z-20 flex items-center space-x-2">
+              <button id="btnToggleSimSound" onclick="toggleSimAudio()" class="bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center space-x-1.5 shadow">
+                <i data-lucide="volume-2" class="w-3.5 h-3.5 text-amber-400"></i>
+                <span id="simSoundBtnText">Audio Effects ON</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Canvas Bottom Legend & Explanations -->
+          <div class="bg-slate-900/90 px-5 py-3 border-t border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between text-xs text-slate-400 gap-2">
+            <div>
+              Physics Engine: <strong class="text-slate-200">Gravity Vector + Soil Cohesion + Dynamic Pore-Water Buoyancy</strong>
+            </div>
+            <div class="flex items-center space-x-3">
+              <span class="text-emerald-400 font-medium">✓ Real-time 60 FPS Particle Avalanche</span>
+              <span class="text-amber-400 font-medium">✓ Automated Lifesaving Corridor Activation</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Right: Real-time Controls & Presenter Deck -->
+        <div class="lg:col-span-4 space-y-4">
+          
+          <!-- BIG TRIGGER LANDSLIDE BUTTON -->
+          <div class="bg-gradient-to-br from-rose-950/60 via-red-950/40 to-slate-900 rounded-2xl border-2 border-rose-500/50 p-5 space-y-3 shadow-xl glow-rose text-center">
+            <h3 class="text-base font-black text-white flex items-center justify-center space-x-2">
+              <span class="text-xl animate-pulse">🌋</span>
+              <span>Live Presentation Demo Trigger</span>
+            </h3>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              Click to instantly trigger a catastrophic slope failure live for audience demonstration:
+            </p>
+            <button id="btnTriggerLandslide" onclick="triggerCatastrophicLandslide()" class="w-full bg-gradient-to-r from-rose-600 via-red-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white font-black py-3.5 px-4 rounded-xl text-sm transition shadow-2xl shadow-rose-950/80 flex items-center justify-center space-x-2 transform active:scale-95">
+              <i data-lucide="zap" class="w-5 h-5 animate-bounce"></i>
+              <span>TRIGGER CATASTROPHIC LANDSLIDE</span>
+            </button>
+            <div class="flex items-center justify-center space-x-2 pt-1">
+              <button onclick="resetSlopeSimulation()" class="text-xs text-slate-400 hover:text-white underline font-semibold">
+                🔄 Reset Slope to Safe Baseline
+              </button>
+              <span class="text-slate-600">•</span>
+              <button onclick="switchSingleView('viewMap'); triggerMapLandslideDemo();" class="text-xs text-emerald-400 hover:text-emerald-300 underline font-semibold">
+                🗺️ Show on GIS Map
+              </button>
+            </div>
+          </div>
+
+          <!-- MANUAL GEOTECHNICAL SLIDERS -->
+          <div class="bg-slate-800/80 rounded-2xl border border-slate-700 p-5 space-y-4 shadow">
+            <h3 class="text-sm font-bold text-white flex items-center space-x-1.5">
+              <i data-lucide="sliders" class="w-4 h-4 text-emerald-400"></i>
+              <span>Manual Variable Adjustments</span>
+            </h3>
+
+            <!-- Rainfall Slider -->
+            <div class="space-y-1.5">
+              <div class="flex items-center justify-between text-xs">
+                <span class="text-slate-300 font-medium">Precipitation Downpour:</span>
+                <span id="sliderRainText" class="font-mono text-indigo-400 font-bold">12 mm/h</span>
+              </div>
+              <input type="range" id="simRainSlider" min="0" max="100" value="12" oninput="handleSimRainInput(this.value)" class="w-full accent-indigo-500 cursor-pointer h-2 bg-slate-900 rounded-lg appearance-none" />
+            </div>
+
+            <!-- Saturation / Water Table Slider -->
+            <div class="space-y-1.5">
+              <div class="flex items-center justify-between text-xs">
+                <span class="text-slate-300 font-medium">Soil Water Saturation (VWC):</span>
+                <span id="sliderSatText" class="font-mono text-cyan-400 font-bold">58%</span>
+              </div>
+              <input type="range" id="simSatSlider" min="20" max="100" value="58" oninput="handleSimSatInput(this.value)" class="w-full accent-cyan-500 cursor-pointer h-2 bg-slate-900 rounded-lg appearance-none" />
+            </div>
+
+            <!-- Slope Angle Slider -->
+            <div class="space-y-1.5">
+              <div class="flex items-center justify-between text-xs">
+                <span class="text-slate-300 font-medium">Slope Inclination (Gradient):</span>
+                <span id="sliderAngleText" class="font-mono text-amber-400 font-bold">38°</span>
+              </div>
+              <input type="range" id="simAngleSlider" min="20" max="55" value="38" oninput="handleSimAngleInput(this.value)" class="w-full accent-amber-500 cursor-pointer h-2 bg-slate-900 rounded-lg appearance-none" />
+            </div>
+          </div>
+
+          <!-- PRESENTER TALKING POINTS -->
+          <div class="bg-slate-800/80 rounded-2xl border border-slate-700 p-5 space-y-3 shadow">
+            <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center space-x-1.5">
+              <i data-lucide="book-open" class="w-3.5 h-3.5 text-amber-400"></i>
+              <span>Presenter Key Talking Points</span>
+            </h3>
+            <ul class="text-xs text-slate-300 space-y-2 list-disc list-inside leading-relaxed">
+              <li><strong class="text-white">Mohr-Coulomb Physics:</strong> Landslides occur when downslope gravitational shear stress exceeds soil shear strength.</li>
+              <li><strong class="text-white">Pore-Water Buoyancy:</strong> Rain fills microscopic pores, creating hydrostatic pressure (u) that lifts soil particles apart.</li>
+              <li><strong class="text-white">Life-Saving Early Warning:</strong> By detecting moisture & micro-tilt 3 hours before failure, LandGuard evacuated all residents before the road collapsed.</li>
+            </ul>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- EMERGENCY HELPLINES -->
+    <section id="emergencyHelplines" class="bg-gradient-to-r from-red-950/40 via-slate-850 to-slate-900 rounded-3xl border border-red-900/40 p-6 md:p-8 space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <span class="text-xs font-bold text-red-400 uppercase tracking-wider">Immediate Assistance</span>
+          <h2 class="text-2xl font-black text-white flex items-center space-x-2.5 mt-1">
+            <i data-lucide="phone-forwarded" class="w-6 h-6 text-red-400"></i>
+            <span>24/7 Disaster Helplines Directory</span>
+          </h2>
+        </div>
+      </div>
+      <div id="standaloneHelplinesGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+    </section>
+
+  </main>
+
+  <!-- SHARED MOBILE SMS ALERT SIMULATOR MODAL -->
+  <div id="smsModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="relative w-full max-w-sm">
+      <button onclick="closeSmsSimulator()" class="absolute -top-10 right-0 text-slate-400 hover:text-white p-2" title="Close">
+        <i data-lucide="x" class="w-6 h-6"></i>
+      </button>
+
+      <div class="phone-screen bg-slate-950 border-4 border-slate-700 text-white rounded-[40px] p-4 shadow-2xl relative">
+        <div class="w-28 h-4 bg-slate-800 rounded-full mx-auto mb-3 flex items-center justify-center space-x-2">
+          <div class="w-2 h-2 rounded-full bg-slate-900"></div>
+          <div class="w-8 h-1 rounded-full bg-slate-700"></div>
+        </div>
+
+        <div class="space-y-4 pt-1 pb-2">
+          <div class="flex justify-between text-[11px] text-slate-400 font-mono px-1">
+            <span id="phoneClock">11:45 AM</span>
+            <div class="flex items-center space-x-1.5">
+              <i data-lucide="wifi" class="w-3 h-3"></i>
+              <i data-lucide="battery-charging" class="w-3.5 h-3.5 text-emerald-400"></i>
+            </div>
+          </div>
+
+          <div id="phoneAlertCard" class="bg-red-600 text-white rounded-2xl p-4 shadow-xl space-y-2.5 vibrate-alert">
+            <div class="flex items-center justify-between text-xs font-bold">
+              <span class="flex items-center space-x-1.5">
+                <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+                <span>EMERGENCY ALERT: LANDSLIDE WARNING</span>
+              </span>
+              <span class="text-[10px] opacity-80">NOW</span>
+            </div>
+            
+            <p id="phoneAlertMsg" class="text-xs leading-relaxed font-medium">
+              LandGuard System: Critical slope movement and 76.4% soil saturation at North Ridge. Evacuate to Govt School Safe Shelter immediately!
+            </p>
+
+            <div class="text-[10px] opacity-90 font-mono bg-red-700/60 p-1.5 rounded">
+              Sender: DISASTER-GOVT-ALERT | Cell Broadcast #HP-401
+            </div>
+          </div>
+
+          <div class="bg-slate-900 rounded-2xl p-3 space-y-2 border border-slate-800 text-xs">
+            <div class="text-[10px] text-center text-slate-400 border-b border-slate-800 pb-1">SMS Thread: LandGuard Early Warning</div>
+            <div class="space-y-2">
+              <div class="bg-slate-800 rounded-xl p-2 text-[11px] text-slate-200">
+                <span class="font-bold text-amber-400 block mb-0.5">Advisory Notice:</span>
+                Rainfall heavy in Sector 4. Saturated soil warning. Keep family go-bags packed.
+              </div>
+              <div class="bg-red-950/80 border border-red-800 rounded-xl p-2 text-[11px] text-red-200">
+                <span class="font-bold text-red-400 block mb-0.5">PRIORITY EVACUATION:</span>
+                Tipping threshold exceeded. Head to Higher Secondary School Auditorium Shelter on High Plateau.
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-2 pt-2">
+            <button onclick="citizenConfirmSafe()" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2 rounded-xl text-xs transition flex items-center justify-center space-x-1.5">
+              <i data-lucide="check" class="w-4 h-4"></i>
+              <span>Reply: "I & My Family Are Safe"</span>
+            </button>
+            <button onclick="citizenRequestRescue()" class="w-full bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-300 font-bold py-2 rounded-xl text-xs transition flex items-center justify-center space-x-1.5">
+              <i data-lucide="life-buoy" class="w-4 h-4 text-red-400"></i>
+              <span>Reply: "Need SOS Evacuation Transport"</span>
+            </button>
+          </div>
+
+          <div id="phoneReplyConfirmation" class="hidden text-center text-xs font-semibold text-emerald-400 py-1">
+            Status reported to Central Disaster Cell.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="bg-slate-950 border-t border-slate-800 py-8 mt-auto">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4 text-xs text-slate-400">
+      <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+        <div>
+          <span class="text-white font-bold">LandGuard All-In-One Edition</span>
+          <span>• Single-File Autonomous Geohazard Early Warning Platform</span>
+        </div>
+        <div class="flex space-x-4">
+          <button onclick="switchSingleView('viewHome')" class="hover:text-white">Home</button>
+          <button onclick="switchSingleView('viewAlerts')" class="hover:text-white">Alerts</button>
+          <button onclick="switchSingleView('viewMap')" class="hover:text-white">Map</button>
+          <button onclick="switchSingleView('viewTelemetry')" class="hover:text-white">Sensors</button>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ================================================================ -->
+  <!-- INLINED JAVASCRIPT LOGIC & TELEMETRY CONTROLLERS                -->
+  <!-- ================================================================ -->
+  <script>
+    // Inlined Configuration Data
+    const STATIONS = [
+      { id: "station-alpha", name: "Station Alpha - North Ridge (38° Slope)", coordinates: [31.1048, 77.1734], elevation: "1,420m", soilMoisture: 76.4, rain: 38.5, tilt: 2.15, pore: 42.8, tier: "Warning" },
+      { id: "station-beta", name: "Station Beta - Valley Pass (26° Slope)", coordinates: [31.0965, 77.1812], elevation: "980m", soilMoisture: 62.1, rain: 22.0, tilt: 0.85, pore: 28.4, tier: "Advisory" },
+      { id: "station-gamma", name: "Station Gamma - Creek Basin (18° Slope)", coordinates: [31.0880, 77.1645], elevation: "740m", soilMoisture: 44.8, rain: 9.5, tilt: 0.12, pore: 15.1, tier: "Normal" }
+    ];
+
+    const SHELTERS = [
+      { id: "sh-1", name: "Govt Higher Secondary School Auditorium", coordinates: [31.0920, 77.1700], capacity: "350 people", currentOccupancy: 38, elevation: "820m (Flat Safe Plateau)", status: "Open & Ready", phone: "+91 98160 12345", route: "Tara Devi Ridge Bypass (Safe from debris gully)" },
+      { id: "sh-2", name: "Community Civic Center - West Wing", coordinates: [31.0845, 77.1770], capacity: "500 people", currentOccupancy: 0, elevation: "760m (Reinforced Structure)", status: "Standby", phone: "+91 98160 54321", route: "Circular Road via West Ridge Corridor" },
+      { id: "sh-3", name: "St. John Sports Complex Safe Pavilion", coordinates: [31.1080, 77.1850], capacity: "250 people", currentOccupancy: 12, elevation: "1,100m (Bedrock Plateau)", status: "Open & Ready", phone: "+91 98160 98765", route: "Proceed via Ridge North Bedrock corridor" }
+    ];
+
+    const HAZARDS = [
+      { name: "Zone A - North Ridge Escarpment", severity: "High", color: "#ef4444", polygon: [[31.1090, 77.1680], [31.1120, 77.1760], [31.1030, 77.1810], [31.1000, 77.1710]] },
+      { name: "Zone B - Valley Pass Cut Slope", severity: "Moderate", color: "#f59e0b", polygon: [[31.1000, 77.1780], [31.1020, 77.1870], [31.0930, 77.1890], [31.0920, 77.1800]] }
+    ];
+
+    const EVACUATION_ROUTES = [
+      {
+        id: "route-1",
+        name: "North Ridge Safe Crest Corridor -> School Shelter",
+        distanceKm: 1.6,
+        estimatedWalkMins: 22,
+        color: "#10b981",
+        path: [[31.1048, 77.1734], [31.1020, 77.1718], [31.0980, 77.1705], [31.0950, 77.1695], [31.0920, 77.1700]]
+      },
+      {
+        id: "route-2",
+        name: "Valley Pass Bypass Corridor -> Civic Center",
+        distanceKm: 1.4,
+        estimatedWalkMins: 18,
+        color: "#059669",
+        path: [[31.0965, 77.1812], [31.0925, 77.1820], [31.0880, 77.1800], [31.0845, 77.1770]]
+      },
+      {
+        id: "route-3",
+        name: "East Crest Ridge -> St. John Pavilion",
+        distanceKm: 0.9,
+        estimatedWalkMins: 11,
+        color: "#34d399",
+        path: [[31.1030, 77.1800], [31.1055, 77.1825], [31.1080, 77.1850]]
+      }
+    ];
+
+    const DEBRIS_FLOW_PATHS = [
+      {
+        id: "gully-1",
+        name: "North Ravine Debris Torrent Path",
+        gradient: "42° average drop",
+        path: [[31.1110, 77.1730], [31.1070, 77.1720], [31.1020, 77.1690], [31.0960, 77.1660], [31.0890, 77.1640]]
+      },
+      {
+        id: "gully-2",
+        name: "Valley Pass Cut Drainage Runoff",
+        gradient: "29° drop",
+        path: [[31.1015, 77.1825], [31.0980, 77.1840], [31.0940, 77.1855], [31.0900, 77.1865]]
+      }
+    ];
+
+    const BULLETINS = [
+      { time: "10:45 AM", level: "CRITICAL", title: "North Ridge Escarpment: Ground Movement Advisory", text: "Station Alpha inclinometer detected 2.15° slope displacement. TDR soil moisture is 76.4%. Families within 200m are advised to move to Govt School Shelter." },
+      { time: "09:15 AM", level: "WEATHER", title: "IMD Orange Alert: Cloudburst Warning for Shimla Hills", text: "Heavy precipitation in excess of 40mm/h predicted over next 4 hours. Flash surge risk high in mountain gullies." },
+      { time: "07:30 AM", level: "INFO", title: "Safe Evacuation Shelters Activated", text: "Higher Secondary School Auditorium and Civic Center have been opened with power generator and medical stations." }
+    ];
+
+    const HELPLINES = [
+      { role: "National Disaster Response Force (NDRF)", number: "1078", direct: "+91 11-24363260" },
+      { role: "State Disaster Emergency Ops (SDRF)", number: "1070", direct: "+91 177-2812344" },
+      { role: "District Disaster Management Cell", number: "1077", direct: "+91 177-2655888" },
+      { role: "Emergency Ambulance Service", number: "108", direct: "108" },
+      { role: "Fire & Mountain Rescue", number: "101", direct: "101" },
+      { role: "Local Police Helpline", number: "112", direct: "112" }
+    ];
+
+    const CHECKLIST = [
+      "High-power LED flashlight & spare batteries",
+      "Emergency loud whistle for signaling rescuers",
+      "Waterproof pouch for Aadhaar/IDs & land records",
+      "72-hour non-perishable dry food & energy bars",
+      "3 liters sealed drinking water per person",
+      "First-aid kit + essential medications"
+    ];
+
+    let map = null;
+    let chart = null;
+    let isSirenOn = false;
+    let audioCtx = null;
+    let sirenOsc = null;
+    let sirenInterval = null;
+
+    let basemapLayers = {};
+    let activeBasemapLayer = null;
+    let mapStationLayerGroup = null;
+    let mapShelterLayerGroup = null;
+    let mapHazardLayerGroup = null;
+    let mapRoutesLayerGroup = null;
+    let mapDebrisLayerGroup = null;
+    let mapSaturationLayerGroup = null;
+    let isMeasuring = false;
+    let measurePoints = [];
+    let measureLine = null;
+    let activeRouteLine = null;
+    let userLocationMarker = null;
+
+    // View Switcher Function
+    function switchSingleView(viewId) {
+      document.querySelectorAll('.single-view-section').forEach(el => el.classList.add('hidden'));
+      const target = document.getElementById(viewId);
+      if (target) target.classList.remove('hidden');
+
+      // Update Nav Buttons
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('tab-btn-active'));
+      const activeBtn = {
+        'viewHome': 'tabHome',
+        'viewSimulation': 'tabSimulation',
+        'viewAlerts': 'tabAlerts',
+        'viewMap': 'tabMap',
+        'viewTelemetry': 'tabTelemetry',
+        'viewCommunity': 'tabCommunity',
+        'viewReports': 'tabReports'
+      }[viewId];
+      if (activeBtn) document.getElementById(activeBtn)?.classList.add('tab-btn-active');
+
+      // Invalidate Map when switching to map
+      if (viewId === 'viewMap') {
+        setTimeout(() => {
+          if (!map) initStandaloneMap();
+          else map.invalidateSize();
+        }, 150);
+      }
+
+      // Initialize Simulation Canvas when switching to simulation
+      if (viewId === 'viewSimulation') {
+        setTimeout(() => {
+          if (!isCanvasInitialized) initLandslideCanvas();
+        }, 150);
+      }
+
+      // Initialize or update Chart when switching to telemetry
+      if (viewId === 'viewTelemetry') {
+        setTimeout(() => {
+          if (!chart) initStandaloneChart();
+        }, 150);
+      }
+
+      if (window.lucide) window.lucide.createIcons();
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // Leaflet Map Initialization - Advanced GIS 2.0 Engine
+    function initStandaloneMap() {
+      if (map) return;
+      map = L.map('standaloneMap', { zoomControl: true }).setView([31.0980, 77.1720], 14);
+
+      // Basemap Definitions
+      basemapLayers = {
+        satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+          attribution: 'Tiles &copy; Esri World Imagery', maxZoom: 19
+        }),
+        topo: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+          attribution: 'Map style: &copy; OpenTopoMap', maxZoom: 17
+        }),
+        dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+          attribution: '&copy; CARTO Dark Matter', maxZoom: 19
+        }),
+        voyager: L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+          attribution: '&copy; CARTO Voyager', maxZoom: 18
+        })
+      };
+
+      // Set default Satellite Basemap
+      activeBasemapLayer = basemapLayers.satellite;
+      activeBasemapLayer.addTo(map);
+
+      // Initialize Layer Groups
+      mapStationLayerGroup = L.layerGroup().addTo(map);
+      mapShelterLayerGroup = L.layerGroup().addTo(map);
+      mapHazardLayerGroup = L.layerGroup().addTo(map);
+      mapRoutesLayerGroup = L.layerGroup().addTo(map);
+      mapDebrisLayerGroup = L.layerGroup().addTo(map);
+      mapSaturationLayerGroup = L.layerGroup().addTo(map);
+
+      // Render All Layers
+      renderStandaloneMapLayers();
+      renderStandaloneSheltersList();
+
+      // Map Click Handler for measurement & routing
+      map.on('click', handleStandaloneMapClick);
+    }
+
+    function switchStandaloneBasemap(type) {
+      if (!map || !basemapLayers[type]) return;
+      if (activeBasemapLayer) map.removeLayer(activeBasemapLayer);
+      activeBasemapLayer = basemapLayers[type];
+      activeBasemapLayer.addTo(map);
+
+      const buttons = {
+        satellite: document.getElementById('bmSatellite'),
+        topo: document.getElementById('bmTopo'),
+        dark: document.getElementById('bmDark'),
+        voyager: document.getElementById('bmStreet')
+      };
+      Object.keys(buttons).forEach(key => {
+        const btn = buttons[key];
+        if (btn) {
+          if (key === type) {
+            btn.className = "px-2.5 py-1 rounded-lg bg-emerald-500 text-slate-950 font-bold transition text-xs flex items-center space-x-1 shadow";
+          } else {
+            btn.className = "px-2.5 py-1 rounded-lg text-slate-300 hover:text-white font-medium transition text-xs flex items-center space-x-1";
+          }
+        }
+      });
+    }
+
+    function toggleStandaloneLayer(layerName, isVisible) {
+      const groups = {
+        hazards: mapHazardLayerGroup,
+        shelters: mapShelterLayerGroup,
+        stations: mapStationLayerGroup,
+        routes: mapRoutesLayerGroup,
+        debris: mapDebrisLayerGroup,
+        saturation: mapSaturationLayerGroup
+      };
+      const group = groups[layerName];
+      if (!group || !map) return;
+      if (isVisible) map.addLayer(group);
+      else map.removeLayer(group);
+    }
+
+    function renderStandaloneMapLayers() {
+      // 1. Hazard Polygons
+      HAZARDS.forEach(h => {
+        L.polygon(h.polygon, {
+          color: h.color,
+          fillColor: h.color,
+          fillOpacity: 0.28,
+          weight: 2.5,
+          dashArray: '6, 6'
+        }).bindPopup(`
+          <div class="p-3 bg-slate-900 text-white rounded-xl space-y-1">
+            <div class="flex items-center space-x-1.5 font-bold text-sm text-red-400">
+              <span>⚠️</span>
+              <span>${h.name}</span>
+            </div>
+            <div class="text-xs text-slate-300">Severity: <strong class="text-white">${h.severity}</strong></div>
+          </div>
+        `).addTo(mapHazardLayerGroup);
+      });
+
+      // 2. Debris Flow Paths
+      DEBRIS_FLOW_PATHS.forEach(df => {
+        L.polyline(df.path, {
+          color: '#ea580c',
+          weight: 4,
+          opacity: 0.85,
+          className: 'debris-flow-line'
+        }).bindPopup(`
+          <div class="p-3 bg-slate-900 text-white rounded-xl space-y-1">
+            <div class="font-bold text-xs text-orange-400">🌊 ${df.name}</div>
+            <div class="text-[11px] text-slate-300">Gradient: ${df.gradient}</div>
+          </div>
+        `).addTo(mapDebrisLayerGroup);
+      });
+
+      // 3. Evacuation Corridors
+      EVACUATION_ROUTES.forEach(route => {
+        L.polyline(route.path, {
+          color: route.color,
+          weight: 5,
+          opacity: 0.9,
+          className: 'route-flow-line'
+        }).bindPopup(`
+          <div class="p-3 bg-slate-900 text-white rounded-xl space-y-1">
+            <div class="font-bold text-xs text-emerald-400">🟢 ${route.name}</div>
+            <div class="text-[11px] text-slate-300">Distance: ${route.distanceKm} km • Walk: ~${route.estimatedWalkMins} mins</div>
+          </div>
+        `).addTo(mapRoutesLayerGroup);
+      });
+
+      // 4. Stations with Sonar Rings
+      STATIONS.forEach(s => {
+        const isWarn = s.tier === 'Warning';
+        const color = isWarn ? '#ef4444' : (s.tier === 'Advisory' ? '#f59e0b' : '#3b82f6');
+
+        L.circle(s.coordinates, {
+          radius: isWarn ? 320 : 180,
+          color: color,
+          fillColor: color,
+          fillOpacity: 0.18,
+          weight: 1
+        }).addTo(mapSaturationLayerGroup);
+
+        const icon = L.divIcon({
+          className: 'custom-leaflet-marker',
+          html: `
+            <div class="relative flex items-center justify-center w-8 h-8">
+              ${isWarn ? `<div class="absolute w-8 h-8 rounded-full bg-red-500 sonar-ring"></div>` : ''}
+              <div style="background:${color}" class="relative w-8 h-8 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-white text-xs font-bold">
+                📡
+              </div>
+            </div>
+          `,
+          iconSize: [32, 32],
+          iconAnchor: [16, 16]
+        });
+
+        L.marker(s.coordinates, { icon }).bindPopup(`
+          <div class="p-3 bg-slate-900 text-white rounded-xl space-y-1.5 min-w-[200px]">
+            <strong class="text-sm block text-emerald-400">${s.name}</strong>
+            <div class="text-xs text-slate-300">Elevation: <strong>${s.elevation}</strong></div>
+            <div class="text-xs text-slate-300">Soil Moisture: <strong class="text-amber-400">${s.soilMoisture}%</strong></div>
+            <div class="text-xs text-slate-300">Rainfall: <strong>${s.rain} mm/h</strong></div>
+            <div class="text-xs text-slate-300">Tilt: <strong>${s.tilt}°</strong> • Pore: <strong>${s.pore} kPa</strong></div>
+          </div>
+        `).addTo(mapStationLayerGroup);
+      });
+
+      // 5. Shelters
+      SHELTERS.forEach(sh => {
+        const icon = L.divIcon({
+          className: 'custom-leaflet-marker',
+          html: `
+            <div class="w-8 h-8 rounded-full bg-emerald-600 border-2 border-white shadow-lg flex items-center justify-center text-white text-xs font-bold">
+              ⛺
+            </div>
+          `,
+          iconSize: [32, 32],
+          iconAnchor: [16, 16]
+        });
+
+        L.marker(sh.coordinates, { icon }).bindPopup(`
+          <div class="p-3 bg-slate-900 text-white rounded-xl space-y-2 min-w-[220px]">
+            <strong class="text-sm block text-emerald-400 font-bold">⛺ ${sh.name}</strong>
+            <div class="text-xs text-slate-300">Capacity: <strong>${sh.capacity}</strong> (Occupancy: ${sh.currentOccupancy})</div>
+            <div class="text-xs text-slate-300">Elevation: ${sh.elevation}</div>
+            <p class="text-[11px] text-slate-400">Route: ${sh.route}</p>
+            <button onclick="routeDirectToShelter(${sh.coordinates[0]}, ${sh.coordinates[1]}, '${sh.name.replace(/'/g, "\\'")}')" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-1.5 rounded-lg text-xs transition">
+              Route Direct Here
+            </button>
+          </div>
+        `).addTo(mapShelterLayerGroup);
+      });
+    }
+
+    function renderStandaloneSheltersList() {
+      const sList = document.getElementById('standaloneSheltersList');
+      if (!sList) return;
+      sList.innerHTML = SHELTERS.map(s => `
+        <div class="p-3 bg-slate-900 rounded-xl border border-slate-700 hover:border-emerald-500/50 transition space-y-1.5">
+          <div class="flex items-center justify-between text-xs">
+            <strong class="text-white">${s.name}</strong>
+            <span class="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded font-bold">${s.status}</span>
+          </div>
+          <div class="text-[11px] text-slate-400">Capacity: ${s.capacity} • Occ: ${s.currentOccupancy}</div>
+          <div class="flex items-center justify-between pt-1">
+            <button onclick="flyToStandaloneShelter(${s.coordinates[0]}, ${s.coordinates[1]}, '${s.name.replace(/'/g, "\\'")}')" class="text-xs text-emerald-400 hover:underline flex items-center space-x-1 font-semibold">
+              <span>Zoom on Map</span>
+              <span>→</span>
+            </button>
+            <a href="tel:${s.phone}" class="text-[11px] text-slate-400 hover:text-white font-mono">${s.phone}</a>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function flyToStandaloneShelter(lat, lng, name) {
+      if (!map) return;
+      map.flyTo([lat, lng], 16, { animate: true, duration: 1.2 });
+      setTimeout(() => {
+        routeDirectToShelter(lat, lng, name);
+      }, 800);
+    }
+
+    function routeDirectToShelter(targetLat, targetLng, targetName) {
+      const originLat = 31.1048;
+      const originLng = 77.1734;
+
+      if (activeRouteLine && map) map.removeLayer(activeRouteLine);
+
+      activeRouteLine = L.polyline([[originLat, originLng], [targetLat, targetLng]], {
+        color: '#10b981',
+        weight: 6,
+        opacity: 0.9,
+        className: 'route-flow-line'
+      }).addTo(map);
+
+      const dist = map.distance([originLat, originLng], [targetLat, targetLng]);
+      const distKm = (dist / 1000).toFixed(2);
+      const walkMins = Math.round(distKm * 14);
+
+      document.getElementById('standaloneRouteDistanceBadge').textContent = `${distKm} km • ~${walkMins}m walk`;
+      document.getElementById('standaloneRouteContent').innerHTML = `
+        <div class="p-2.5 rounded-xl bg-slate-900/90 border border-emerald-500/40 space-y-1 text-xs">
+          <div class="text-white font-bold">Active Evacuation Corridor:</div>
+          <div class="text-emerald-400 font-extrabold text-sm">Target: ${targetName}</div>
+          <div class="text-slate-300">Distance: <strong class="text-white">${distKm} km</strong> • Estimated walk: <strong class="text-white">${walkMins} mins</strong></div>
+          <div class="text-[11px] text-emerald-300">Avoid valley streams; remain on high bedrock crests.</div>
+        </div>
+      `;
+    }
+
+    function findNearestShelterGPS() {
+      if (!navigator.geolocation) {
+        routeDirectToShelter(31.0920, 77.1700, "Govt Higher Secondary School Auditorium");
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const userLat = 31.1020; // Bound to demo zone
+          const userLng = 77.1725;
+          plotNearestFromPoint(userLat, userLng);
+        },
+        () => {
+          // Fallback to simulated location
+          plotNearestFromPoint(31.1030, 77.1730);
+        }
+      );
+    }
+
+    function plotNearestFromPoint(lat, lng) {
+      let nearest = SHELTERS[0];
+      let minDist = 9999999;
+      SHELTERS.forEach(sh => {
+        const d = map.distance([lat, lng], sh.coordinates);
+        if (d < minDist) { minDist = d; nearest = sh; }
+      });
+
+      if (userLocationMarker && map) map.removeLayer(userLocationMarker);
+      const uIcon = L.divIcon({
+        className: 'custom-leaflet-marker',
+        html: `<div class="w-6 h-6 rounded-full bg-blue-500 border-2 border-white shadow-lg flex items-center justify-center text-white text-xs">📍</div>`,
+        iconSize: [24, 24], iconAnchor: [12, 12]
+      });
+      userLocationMarker = L.marker([lat, lng], { icon: uIcon }).addTo(map);
+
+      routeDirectToShelter(nearest.coordinates[0], nearest.coordinates[1], nearest.name);
+      map.fitBounds([[lat, lng], nearest.coordinates], { padding: [60, 60] });
+    }
+
+    function toggleStandaloneMeasurement() {
+      isMeasuring = !isMeasuring;
+      const btn = document.getElementById('measureBtnText');
+      const hud = document.getElementById('standaloneMeasureHud');
+      if (isMeasuring) {
+        btn.textContent = "Exit Ruler";
+        hud.classList.remove('hidden');
+        measurePoints = [];
+        if (measureLine && map) map.removeLayer(measureLine);
+      } else {
+        btn.textContent = "Measure Distance";
+        hud.classList.add('hidden');
+        if (measureLine && map) map.removeLayer(measureLine);
+        measurePoints = [];
+      }
+    }
+
+    function handleStandaloneMapClick(e) {
+      if (isMeasuring) {
+        measurePoints.push(e.latlng);
+        if (measurePoints.length === 1) {
+          document.getElementById('standaloneMeasureHudText').textContent = "Point 1 pinned. Click 2nd point to compute terrain distance.";
+        } else if (measurePoints.length === 2) {
+          const d = map.distance(measurePoints[0], measurePoints[1]);
+          const dKm = (d / 1000).toFixed(2);
+          if (measureLine && map) map.removeLayer(measureLine);
+          measureLine = L.polyline([measurePoints[0], measurePoints[1]], { color: '#f59e0b', weight: 3, dashArray: '5, 5' }).addTo(map);
+          document.getElementById('standaloneMeasureHudText').innerHTML = `Calculated Distance: <strong class="text-amber-400 text-sm font-bold">${dKm} km</strong> (${Math.round(d)} meters)`;
+          measurePoints = [];
+        }
+      } else {
+        // Tap to route from tapped point
+        plotNearestFromPoint(e.latlng.lat, e.latlng.lng);
+      }
+    }
+
+    function handleStandaloneScrubber(val) {
+      const hours = ["-24h (00:00)", "-20h", "-16h", "-12h (12:00)", "-8h", "-6h", "-4h", "-2h", "-1h", "Now", "+1h (Forecast)", "+2h (Forecast)", "+3h (Peak)"];
+      const saturations = [42.0, 44.5, 48.0, 58.0, 64.2, 68.0, 71.5, 73.8, 75.0, 76.4, 78.5, 81.2, 83.4];
+      const idx = parseInt(val);
+      const timeStr = hours[idx] || "Now";
+      const satVal = saturations[idx] || 76.4;
+
+      document.getElementById('standaloneScrubberTime').textContent = timeStr;
+      document.getElementById('standaloneScrubberSaturation').textContent = `${satVal.toFixed(1)}%`;
+      if (satVal > 80) document.getElementById('standaloneScrubberSaturation').className = "text-red-400 font-bold";
+      else if (satVal > 68) document.getElementById('standaloneScrubberSaturation').className = "text-amber-400 font-bold";
+      else document.getElementById('standaloneScrubberSaturation').className = "text-emerald-400 font-bold";
+    }
+
+    function toggleStandaloneFullscreen() {
+      const card = document.getElementById('standaloneMapCard');
+      if (!card) return;
+      card.classList.toggle('map-fullscreen-active');
+      setTimeout(() => { if (map) map.invalidateSize(); }, 200);
+    }
+
+    function resetStandaloneMap() {
+      if (map) map.setView([31.0980, 77.1720], 14);
+    }
+
+    // Chart.js Initialization
+    function initStandaloneChart() {
+      const ctx = document.getElementById('standaloneChart')?.getContext('2d');
+      if (!ctx) return;
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: ["00:00", "04:00", "08:00", "12:00", "16:00", "20:00", "Now"],
+          datasets: [
+            { label: 'Soil Moisture (%)', data: [42, 48, 58, 69, 73, 76.4, 76.4], borderColor: '#f59e0b', tension: 0.35, fill: false },
+            { label: 'Rainfall (mm/h)', data: [2, 8, 22, 32, 36, 38.5, 38.5], borderColor: '#3b82f6', tension: 0.35, fill: false }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { grid: { color: '#1e293b' }, ticks: { color: '#94a3b8' } },
+            y: { grid: { color: '#1e293b' }, ticks: { color: '#94a3b8' } }
+          }
+        }
+      });
+    }
+
+    // Telemetry Station Switcher
+    function changeStandaloneStation(stId) {
+      const st = STATIONS.find(s => s.id === stId);
+      if (!st) return;
+      document.getElementById('telMoisture').textContent = st.soilMoisture;
+      document.getElementById('telMoistureBar').style.width = `${st.soilMoisture}%`;
+      document.getElementById('telRain').textContent = st.rain;
+      document.getElementById('telTilt').textContent = st.tilt;
+      document.getElementById('telPore').textContent = st.pore;
+    }
+
+    // Simulation Slider Logic
+    function handleStandaloneSim() {
+      const rain = parseFloat(document.getElementById('standaloneRainSlider').value);
+      const moisture = parseFloat(document.getElementById('standaloneMoistureSlider').value);
+      document.getElementById('simRainText').textContent = `${rain.toFixed(1)} mm/h`;
+      document.getElementById('simMoistureText').textContent = `${moisture.toFixed(1)}% VWC`;
+
+      const fos = (1.6 - (moisture / 100 * 0.8) - (rain / 90 * 0.3)).toFixed(2);
+      document.getElementById('standaloneSimFos').textContent = `Factor of Safety (FoS) = ${fos}`;
+
+      const badge = document.getElementById('standaloneSimBadge');
+      if (moisture > 82 || rain > 50) {
+        badge.textContent = "CRITICAL EVACUATE";
+        badge.className = "px-3 py-1 rounded text-xs font-bold uppercase bg-red-500/20 text-red-300 border border-red-500/50";
+      } else if (moisture > 68) {
+        badge.textContent = "WARNING";
+        badge.className = "px-3 py-1 rounded text-xs font-bold uppercase bg-amber-500/20 text-amber-300 border border-amber-500/40";
+      } else {
+        badge.textContent = "NORMAL";
+        badge.className = "px-3 py-1 rounded text-xs font-bold uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/40";
+      }
+    }
+
+    // ================================================================
+    // LIVE LANDSLIDE PHYSICS & PRESENTATION ENGINE
+    // ================================================================
+    let simCanvas = null;
+    let simCtx = null;
+    let isCanvasInitialized = false;
+    let simAnimId = null;
+
+    let simState = {
+      rainfallRate: 12,       // mm/h
+      soilSaturation: 58,     // % VWC
+      slopeAngle: 38,         // degrees
+      porePressure: 22.4,     // kPa
+      inclinometerTilt: 0.35, // degrees
+      factorOfSafety: 1.54,
+      isCollapsed: false,
+      collapseOffset: 0,      // pixels moved along slip plane
+      maxCollapseOffset: 120,
+      isAudioEnabled: true,
+      rainParticles: [],
+      debrisParticles: [],
+      dustParticles: []
+    };
+
+    let presState = {
+      isActive: false,
+      currentStage: 1,
+      isAutoPlaying: false,
+      timer: null
+    };
+
+    let earthRumbleSource = null;
+    let earthRumbleGain = null;
+    let mapLandslideMarker = null;
+
+    function initLandslideCanvas() {
+      simCanvas = document.getElementById('landslideCanvas');
+      if (!simCanvas) return;
+      simCtx = simCanvas.getContext('2d');
+      isCanvasInitialized = true;
+
+      // Initialize Rain Particles
+      simState.rainParticles = [];
+      for (let i = 0; i < 90; i++) {
+        simState.rainParticles.push({
+          x: Math.random() * simCanvas.width,
+          y: Math.random() * simCanvas.height,
+          speed: 4 + Math.random() * 6,
+          length: 8 + Math.random() * 8
+        });
+      }
+
+      if (!simAnimId) {
+        simAnimId = requestAnimationFrame(renderLandslideFrame);
+      }
+      recalculateFos(simState.rainfallRate, simState.soilSaturation, simState.slopeAngle);
+    }
+
+    function renderLandslideFrame() {
+      if (!simCtx || !simCanvas) return;
+      const w = simCanvas.width;
+      const h = simCanvas.height;
+
+      // 1. Clear & Background Mountain Sky
+      const skyGrad = simCtx.createLinearGradient(0, 0, 0, h);
+      skyGrad.addColorStop(0, '#0a0f1d');
+      skyGrad.addColorStop(0.6, '#1e293b');
+      skyGrad.addColorStop(1, '#0f172a');
+      simCtx.fillStyle = skyGrad;
+      simCtx.fillRect(0, 0, w, h);
+
+      // 2. Distant Mountain Silhouette
+      simCtx.fillStyle = '#1e293b';
+      simCtx.beginPath();
+      simCtx.moveTo(0, h * 0.45);
+      simCtx.lineTo(w * 0.25, h * 0.25);
+      simCtx.lineTo(w * 0.55, h * 0.38);
+      simCtx.lineTo(w * 0.75, h * 0.22);
+      simCtx.lineTo(w, h * 0.40);
+      simCtx.lineTo(w, h);
+      simCtx.lineTo(0, h);
+      simCtx.fill();
+
+      // 3. Falling Rain Streaks
+      if (simState.rainfallRate > 0) {
+        simCtx.strokeStyle = 'rgba(147, 197, 253, 0.45)';
+        simCtx.lineWidth = 1.2;
+        const count = Math.min(simState.rainParticles.length, Math.round(simState.rainfallRate * 1.2));
+        for (let i = 0; i < count; i++) {
+          const p = simState.rainParticles[i];
+          simCtx.beginPath();
+          simCtx.moveTo(p.x, p.y);
+          simCtx.lineTo(p.x + p.length * 0.3, p.y + p.length);
+          simCtx.stroke();
+
+          p.y += p.speed * (0.8 + simState.rainfallRate / 50);
+          p.x += 1.2;
+          if (p.y > h) {
+            p.y = -10;
+            p.x = Math.random() * w;
+          }
+        }
+      }
+
+      // 4. Slope Geometry Keypoints
+      const pCrownLeft = { x: 0, y: 70 };
+      const pCrownEdge = { x: 120, y: 70 };
+      const pSlipTop = { x: 160, y: 85 };
+      const pRoadBenchL = { x: 440, y: 270 };
+      const pRoadBenchR = { x: 520, y: 270 };
+      const pValleyL = { x: 700, y: 380 };
+      const pValleyR = { x: w, y: 380 };
+
+      // 5. Solid Granite Bedrock Layer
+      simCtx.fillStyle = '#1e293b';
+      simCtx.beginPath();
+      simCtx.moveTo(pCrownLeft.x, pCrownLeft.y);
+      simCtx.lineTo(pCrownEdge.x, pCrownEdge.y);
+      simCtx.lineTo(pRoadBenchL.x, pRoadBenchL.y);
+      simCtx.lineTo(pRoadBenchR.x, pRoadBenchR.y);
+      simCtx.lineTo(pValleyL.x, pValleyL.y);
+      simCtx.lineTo(pValleyR.x, pValleyR.y);
+      simCtx.lineTo(w, h);
+      simCtx.lineTo(0, h);
+      simCtx.closePath();
+      simCtx.fill();
+
+      // Granite texture hatch lines
+      simCtx.strokeStyle = 'rgba(71, 85, 105, 0.4)';
+      simCtx.lineWidth = 1;
+      for (let x = 60; x < w; x += 40) {
+        simCtx.beginPath();
+        simCtx.moveTo(x, h * 0.55);
+        simCtx.lineTo(x + 25, h * 0.7);
+        simCtx.stroke();
+      }
+
+      // 6. Groundwater / Phreatic Water Table Line
+      const waterHead = (simState.soilSaturation / 100) * 140;
+      simCtx.strokeStyle = 'rgba(56, 189, 248, 0.85)';
+      simCtx.lineWidth = 2.5;
+      simCtx.setLineDash([6, 4]);
+      simCtx.beginPath();
+      simCtx.moveTo(pCrownEdge.x, pCrownEdge.y + 70 - waterHead * 0.3);
+      simCtx.quadraticCurveTo(pRoadBenchL.x * 0.65, 230 - waterHead * 0.4, pRoadBenchL.x, 270 - waterHead * 0.2);
+      simCtx.lineTo(pValleyL.x, 380);
+      simCtx.stroke();
+      simCtx.setLineDash([]);
+
+      // 7. Slip Failure Surface (Shear Arc)
+      simCtx.strokeStyle = simState.isCollapsed ? '#ef4444' : (simState.factorOfSafety < 1.15 ? '#f59e0b' : '#64748b');
+      simCtx.lineWidth = simState.isCollapsed ? 3 : 2;
+      simCtx.setLineDash(simState.isCollapsed ? [] : [5, 5]);
+      simCtx.beginPath();
+      simCtx.moveTo(pSlipTop.x, pSlipTop.y);
+      simCtx.quadraticCurveTo(310, 220, pRoadBenchL.x, pRoadBenchL.y);
+      simCtx.stroke();
+      simCtx.setLineDash([]);
+
+      // 8. Soil Overburden Wedge & Landslide Motion
+      simCtx.save();
+      if (simState.isCollapsed) {
+        if (simState.collapseOffset < simState.maxCollapseOffset) {
+          simState.collapseOffset += 2.2;
+        }
+        const slideAngle = 0.58; // radians (~33 deg)
+        simCtx.translate(simState.collapseOffset * Math.cos(slideAngle), simState.collapseOffset * Math.sin(slideAngle));
+      }
+
+      const isWet = simState.soilSaturation > 70;
+      simCtx.fillStyle = isWet ? '#78350f' : '#92400e';
+      simCtx.beginPath();
+      simCtx.moveTo(pSlipTop.x, pSlipTop.y);
+      simCtx.lineTo(pRoadBenchL.x, pRoadBenchL.y);
+      simCtx.lineTo(pCrownEdge.x + 30, pCrownEdge.y + 15);
+      simCtx.closePath();
+      simCtx.fill();
+
+      // Topsoil Grass Band
+      simCtx.strokeStyle = '#15803d';
+      simCtx.lineWidth = 4;
+      simCtx.beginPath();
+      simCtx.moveTo(pSlipTop.x, pSlipTop.y);
+      simCtx.lineTo(pRoadBenchL.x, pRoadBenchL.y);
+      simCtx.stroke();
+
+      // Pine Trees on Slope
+      drawPineTree(simCtx, pSlipTop.x + 50, pSlipTop.y + 35, 30, simState.inclinometerTilt);
+      drawPineTree(simCtx, pSlipTop.x + 110, pSlipTop.y + 75, 34, simState.inclinometerTilt);
+      drawPineTree(simCtx, pSlipTop.x + 180, pSlipTop.y + 125, 32, simState.inclinometerTilt);
+      drawPineTree(simCtx, pSlipTop.x + 240, pSlipTop.y + 165, 36, simState.inclinometerTilt);
+
+      simCtx.restore();
+
+      // 9. Tension Crack at Crown
+      if (simState.soilSaturation > 70 || simState.isCollapsed) {
+        const crackWidth = simState.isCollapsed ? 32 : Math.min(18, (simState.soilSaturation - 65) * 1.1);
+        simCtx.fillStyle = '#0f172a';
+        simCtx.beginPath();
+        simCtx.moveTo(pSlipTop.x - 5, pSlipTop.y - 8);
+        simCtx.lineTo(pSlipTop.x + crackWidth, pSlipTop.y - 8);
+        simCtx.lineTo(pSlipTop.x + crackWidth * 0.4, pSlipTop.y + 25);
+        simCtx.closePath();
+        simCtx.fill();
+
+        simCtx.fillStyle = '#f87171';
+        simCtx.font = 'bold 10px JetBrains Mono, monospace';
+        simCtx.fillText(`TENSION CRACK (${Math.round(crackWidth * 2)}cm)`, pSlipTop.x - 30, pSlipTop.y - 18);
+      }
+
+      // 10. Road Cut & Retaining Wall
+      simCtx.fillStyle = '#334155';
+      simCtx.fillRect(pRoadBenchL.x, pRoadBenchL.y - 4, pRoadBenchR.x - pRoadBenchL.x, 8);
+
+      if (!simState.isCollapsed) {
+        simCtx.fillStyle = '#64748b';
+        simCtx.fillRect(pRoadBenchL.x - 10, pRoadBenchL.y - 30, 10, 34);
+        simCtx.fillStyle = '#eab308';
+        simCtx.fillRect(pRoadBenchL.x + 25, pRoadBenchL.y - 14, 26, 10);
+        simCtx.fillStyle = '#0f172a';
+        simCtx.beginPath();
+        simCtx.arc(pRoadBenchL.x + 31, pRoadBenchL.y - 3, 3, 0, Math.PI * 2);
+        simCtx.arc(pRoadBenchL.x + 45, pRoadBenchL.y - 3, 3, 0, Math.PI * 2);
+        simCtx.fill();
+      } else {
+        simCtx.fillStyle = '#475569';
+        simCtx.fillRect(pRoadBenchL.x + 5, pRoadBenchL.y - 10, 8, 8);
+        simCtx.fillRect(pRoadBenchL.x + 18, pRoadBenchL.y - 8, 10, 7);
+        simCtx.fillRect(pRoadBenchL.x + 32, pRoadBenchL.y - 12, 9, 9);
+      }
+
+      // 11. Debris Avalanche Particles (When Collapsed)
+      if (simState.isCollapsed) {
+        if (simState.debrisParticles.length < 160) {
+          for (let i = 0; i < 4; i++) {
+            simState.debrisParticles.push({
+              x: pRoadBenchL.x + Math.random() * 40,
+              y: pRoadBenchL.y - 10 + Math.random() * 20,
+              vx: 3 + Math.random() * 5,
+              vy: 2 + Math.random() * 4,
+              size: 3 + Math.random() * 7,
+              color: Math.random() > 0.4 ? '#78350f' : '#475569',
+              settled: false
+            });
+          }
+        }
+
+        simState.debrisParticles.forEach(dp => {
+          if (!dp.settled) {
+            dp.x += dp.vx;
+            dp.y += dp.vy;
+            dp.vy += 0.25;
+
+            if (dp.y >= pValleyL.y + (dp.x - pValleyL.x) * 0.05) {
+              dp.vy *= -0.3;
+              dp.vx *= 0.6;
+              if (Math.abs(dp.vy) < 0.8) {
+                dp.settled = true;
+                dp.y = pValleyL.y + 4 + Math.random() * 8;
+              }
+            }
+          }
+          simCtx.fillStyle = dp.color;
+          simCtx.beginPath();
+          simCtx.arc(dp.x, dp.y, dp.size, 0, Math.PI * 2);
+          simCtx.fill();
+        });
+
+        // Dust clouds
+        if (simState.dustParticles.length < 40) {
+          simState.dustParticles.push({
+            x: pRoadBenchL.x + Math.random() * 120,
+            y: pRoadBenchL.y + Math.random() * 40,
+            radius: 8 + Math.random() * 12,
+            alpha: 0.7,
+            vy: -0.6 - Math.random() * 0.8
+          });
+        }
+        simState.dustParticles.forEach((d, idx) => {
+          d.y += d.vy;
+          d.radius += 0.4;
+          d.alpha -= 0.008;
+          if (d.alpha > 0) {
+            simCtx.fillStyle = `rgba(203, 213, 225, ${d.alpha})`;
+            simCtx.beginPath();
+            simCtx.arc(d.x, d.y, d.radius, 0, Math.PI * 2);
+            simCtx.fill();
+          } else {
+            simState.dustParticles.splice(idx, 1);
+          }
+        });
+      }
+
+      // 12. Safe Evacuation Shelter on Valley Plateau
+      drawEvacShelter(simCtx, pValleyL.x + 50, pValleyL.y - 45);
+
+      // 13. In-Canvas Geotechnical Legend Stamps
+      simCtx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+      simCtx.strokeStyle = 'rgba(51, 65, 85, 0.8)';
+      simCtx.lineWidth = 1;
+      simCtx.fillRect(16, 16, 230, 80);
+      simCtx.strokeRect(16, 16, 230, 80);
+
+      simCtx.fillStyle = '#ffffff';
+      simCtx.font = 'bold 11px Plus Jakarta Sans, sans-serif';
+      simCtx.fillText('SLOPE GEOTECHNICAL TRANSECT', 26, 32);
+
+      simCtx.font = '10px JetBrains Mono, monospace';
+      simCtx.fillStyle = simState.factorOfSafety < 1.0 ? '#ef4444' : (simState.factorOfSafety < 1.25 ? '#f59e0b' : '#10b981');
+      simCtx.fillText(`Factor of Safety: FoS = ${simState.factorOfSafety.toFixed(2)}`, 26, 48);
+
+      simCtx.fillStyle = '#94a3b8';
+      simCtx.fillText(`Pore Pressure (u): ${simState.porePressure.toFixed(1)} kPa`, 26, 64);
+      simCtx.fillText(`Precipitation: ${simState.rainfallRate.toFixed(1)} mm/h`, 26, 78);
+
+      simAnimId = requestAnimationFrame(renderLandslideFrame);
+    }
+
+    function drawPineTree(ctx, x, y, h, tiltDeg) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate((tiltDeg * Math.PI) / 180);
+
+      // Trunk
+      ctx.fillStyle = '#78350f';
+      ctx.fillRect(-2.5, -h * 0.2, 5, h * 0.2);
+
+      // Needles foliage triangles
+      ctx.fillStyle = '#15803d';
+      for (let i = 0; i < 3; i++) {
+        const tierY = -h * 0.2 - i * (h * 0.26);
+        const halfW = (h * 0.35) * (1 - i * 0.22);
+        ctx.beginPath();
+        ctx.moveTo(-halfW, tierY);
+        ctx.lineTo(halfW, tierY);
+        ctx.lineTo(0, tierY - h * 0.36);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function drawEvacShelter(ctx, x, y) {
+      // Concrete Base
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(x - 30, y + 36, 80, 10);
+
+      // Main Building
+      ctx.fillStyle = '#0f172a';
+      ctx.strokeStyle = '#10b981';
+      ctx.lineWidth = 2;
+      ctx.fillRect(x - 25, y, 70, 36);
+      ctx.strokeRect(x - 25, y, 70, 36);
+
+      // Green Emergency Roof
+      ctx.fillStyle = '#059669';
+      ctx.beginPath();
+      ctx.moveTo(x - 32, y);
+      ctx.lineTo(x + 52, y);
+      ctx.lineTo(x + 10, y - 18);
+      ctx.closePath();
+      ctx.fill();
+
+      // Shelter Door
+      ctx.fillStyle = '#10b981';
+      ctx.fillRect(x - 8, y + 14, 16, 22);
+
+      // Safe Sign
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 8px Plus Jakarta Sans, sans-serif';
+      ctx.fillText('SAFE SHELTER', x - 18, y - 4);
+    }
+
+    function recalculateFos(rain, sat, angle) {
+      simState.rainfallRate = parseFloat(rain);
+      simState.soilSaturation = parseFloat(sat);
+      simState.slopeAngle = parseFloat(angle);
+
+      simState.porePressure = Math.max(5.0, (simState.soilSaturation - 30) * 0.85 + simState.rainfallRate * 0.32);
+      simState.inclinometerTilt = Math.max(0.1, (simState.soilSaturation - 45) * 0.06 + (simState.slopeAngle - 25) * 0.05);
+
+      const frictionAngleDeg = 32;
+      const phi = (frictionAngleDeg * Math.PI) / 180;
+      const theta = (simState.slopeAngle * Math.PI) / 180;
+      const cohesion = 18;
+      const gammaZ = 52;
+      const u = simState.porePressure;
+
+      const shearStrength = cohesion + Math.max(0, (gammaZ * Math.pow(Math.cos(theta), 2) - u) * Math.tan(phi));
+      const shearStress = gammaZ * Math.sin(theta) * Math.cos(theta);
+      let calculatedFos = shearStrength / shearStress;
+
+      if (simState.isCollapsed) calculatedFos = Math.min(0.74, calculatedFos);
+      simState.factorOfSafety = Math.max(0.65, Math.round(calculatedFos * 100) / 100);
+
+      const fosEl = document.getElementById('canvasFosVal');
+      const fosStatus = document.getElementById('canvasFosStatus');
+      const fosBar = document.getElementById('canvasFosBar');
+      const poreEl = document.getElementById('canvasPoreVal');
+      const satEl = document.getElementById('canvasSatVal');
+      const rainEl = document.getElementById('canvasRainVal');
+      const tiltEl = document.getElementById('canvasTiltVal');
+      const alarmEl = document.getElementById('canvasAlarmBadge');
+
+      if (fosEl) fosEl.textContent = simState.factorOfSafety.toFixed(2);
+      if (poreEl) poreEl.textContent = simState.porePressure.toFixed(1);
+      if (satEl) satEl.textContent = simState.soilSaturation.toFixed(1);
+      if (rainEl) rainEl.textContent = simState.rainfallRate.toFixed(1);
+      if (tiltEl) tiltEl.textContent = simState.inclinometerTilt.toFixed(2);
+
+      if (fosBar) {
+        const barW = Math.min(100, Math.max(10, (simState.factorOfSafety / 2.0) * 100));
+        fosBar.style.width = `${barW}%`;
+      }
+
+      if (simState.factorOfSafety < 1.0 || simState.isCollapsed) {
+        if (fosEl) fosEl.className = "text-2xl font-black font-mono text-red-500";
+        if (fosStatus) { fosStatus.textContent = "RUPTURE!"; fosStatus.className = "text-[10px] font-bold uppercase text-red-400"; }
+        if (fosBar) fosBar.className = "h-full bg-red-600 transition-all duration-300";
+        if (alarmEl) {
+          alarmEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-red-500 animate-ping"></span><span class="text-red-400 font-black">CRITICAL EVACUATE</span>`;
+        }
+      } else if (simState.factorOfSafety < 1.25) {
+        if (fosEl) fosEl.className = "text-2xl font-black font-mono text-amber-400";
+        if (fosStatus) { fosStatus.textContent = "CREEP"; fosStatus.className = "text-[10px] font-bold uppercase text-amber-400"; }
+        if (fosBar) fosBar.className = "h-full bg-amber-500 transition-all duration-300";
+        if (alarmEl) {
+          alarmEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500"></span><span class="text-amber-400 font-bold">WARNING</span>`;
+        }
+      } else {
+        if (fosEl) fosEl.className = "text-2xl font-black font-mono text-emerald-400";
+        if (fosStatus) { fosStatus.textContent = "STABLE"; fosStatus.className = "text-[10px] font-bold uppercase text-emerald-400"; }
+        if (fosBar) fosBar.className = "h-full bg-emerald-500 transition-all duration-300";
+        if (alarmEl) {
+          alarmEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400"></span><span class="text-emerald-400 font-bold">NORMAL</span>`;
+        }
+      }
+    }
+
+    function handleSimRainInput(val) {
+      document.getElementById('sliderRainText').textContent = `${val} mm/h`;
+      recalculateFos(val, simState.soilSaturation, simState.slopeAngle);
+    }
+    function handleSimSatInput(val) {
+      document.getElementById('sliderSatText').textContent = `${val}%`;
+      recalculateFos(simState.rainfallRate, val, simState.slopeAngle);
+    }
+    function handleSimAngleInput(val) {
+      document.getElementById('sliderAngleText').textContent = `${val}°`;
+      recalculateFos(simState.rainfallRate, simState.soilSaturation, val);
+    }
+
+    function loadSimScenario(type) {
+      if (type === 'dry') {
+        resetSlopeSimulation();
+      } else if (type === 'rain') {
+        simState.isCollapsed = false;
+        document.getElementById('simRainSlider').value = 45;
+        document.getElementById('simSatSlider').value = 72;
+        document.getElementById('sliderRainText').textContent = '45 mm/h';
+        document.getElementById('sliderSatText').textContent = '72%';
+        recalculateFos(45, 72, simState.slopeAngle);
+      } else if (type === 'warning') {
+        simState.isCollapsed = false;
+        document.getElementById('simRainSlider').value = 65;
+        document.getElementById('simSatSlider').value = 84;
+        document.getElementById('sliderRainText').textContent = '65 mm/h';
+        document.getElementById('sliderSatText').textContent = '84%';
+        recalculateFos(65, 84, simState.slopeAngle);
+      } else if (type === 'collapse') {
+        triggerCatastrophicLandslide();
+      }
+    }
+
+    function triggerCatastrophicLandslide() {
+      simState.isCollapsed = true;
+      simState.collapseOffset = 0;
+      simState.debrisParticles = [];
+      simState.dustParticles = [];
+
+      document.getElementById('simRainSlider').value = 88;
+      document.getElementById('simSatSlider').value = 96;
+      document.getElementById('sliderRainText').textContent = '88 mm/h';
+      document.getElementById('sliderSatText').textContent = '96%';
+      recalculateFos(88, 96, simState.slopeAngle);
+
+      const card = document.getElementById('landslideSimCard');
+      if (card) {
+        card.classList.remove('landslide-shaking');
+        void card.offsetWidth;
+        card.classList.add('landslide-shaking');
+        setTimeout(() => card.classList.remove('landslide-shaking'), 3800);
+      }
+
+      const banner = document.getElementById('canvasEventBanner');
+      if (banner) banner.classList.remove('hidden');
+
+      if (simState.isAudioEnabled) {
+        startEarthRumbleSound();
+      }
+
+      setTimeout(() => {
+        if (!isSirenOn) toggleEmergencySiren();
+      }, 1400);
+
+      setTimeout(() => {
+        openSmsSimulator("CRITICAL EVACUATION BROADCAST: Landslide rupture active on North Ridge slope! Road KM 4.2 blocked by 4,200m³ debris torrent. Move immediately via safe green ridge corridor to Govt School Shelter.");
+      }, 3000);
+    }
+
+    function resetSlopeSimulation() {
+      simState.isCollapsed = false;
+      simState.collapseOffset = 0;
+      simState.debrisParticles = [];
+      simState.dustParticles = [];
+
+      const banner = document.getElementById('canvasEventBanner');
+      if (banner) banner.classList.add('hidden');
+
+      const card = document.getElementById('landslideSimCard');
+      if (card) card.classList.remove('landslide-shaking');
+
+      stopEarthRumbleSound();
+      if (isSirenOn) toggleEmergencySiren();
+
+      document.getElementById('simRainSlider').value = 12;
+      document.getElementById('simSatSlider').value = 58;
+      document.getElementById('simAngleSlider').value = 38;
+      document.getElementById('sliderRainText').textContent = '12 mm/h';
+      document.getElementById('sliderSatText').textContent = '58%';
+      document.getElementById('sliderAngleText').textContent = '38°';
+
+      recalculateFos(12, 58, 38);
+    }
+
+    function startEarthRumbleSound() {
+      try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        audioCtx = audioCtx || new AudioContext();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+
+        const bufferSize = audioCtx.sampleRate * 4.0;
+        const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+        const output = noiseBuffer.getChannelData(0);
+        let lastOut = 0.0;
+        for (let i = 0; i < bufferSize; i++) {
+          const white = Math.random() * 2 - 1;
+          output[i] = (lastOut + 0.04 * white) / 1.04;
+          lastOut = output[i];
+          output[i] *= 3.5;
+        }
+
+        earthRumbleSource = audioCtx.createBufferSource();
+        earthRumbleSource.buffer = noiseBuffer;
+
+        const lowPass = audioCtx.createBiquadFilter();
+        lowPass.type = 'lowpass';
+        lowPass.frequency.setValueAtTime(80, audioCtx.currentTime);
+        lowPass.frequency.exponentialRampToValueAtTime(220, audioCtx.currentTime + 1.2);
+        lowPass.frequency.exponentialRampToValueAtTime(60, audioCtx.currentTime + 3.8);
+
+        earthRumbleGain = audioCtx.createGain();
+        earthRumbleGain.gain.setValueAtTime(0.01, audioCtx.currentTime);
+        earthRumbleGain.gain.linearRampToValueAtTime(0.35, audioCtx.currentTime + 0.5);
+        earthRumbleGain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 3.8);
+
+        earthRumbleSource.connect(lowPass);
+        lowPass.connect(earthRumbleGain);
+        earthRumbleGain.connect(audioCtx.destination);
+
+        earthRumbleSource.start();
+      } catch (e) {
+        console.warn("Audio rumble synthesis error:", e);
+      }
+    }
+
+    function stopEarthRumbleSound() {
+      if (earthRumbleSource) {
+        try { earthRumbleSource.stop(); } catch (e) {}
+        earthRumbleSource = null;
+      }
+    }
+
+    function toggleSimAudio() {
+      simState.isAudioEnabled = !simState.isAudioEnabled;
+      const btn = document.getElementById('simSoundBtnText');
+      if (btn) btn.textContent = simState.isAudioEnabled ? "Audio Effects ON" : "Audio Muted";
+    }
+
+    // Presenter Walkthrough Demo Controller
+    function startLivePresentationDemo() {
+      presState.isActive = true;
+      const hud = document.getElementById('presentationHudBar');
+      if (hud) hud.classList.remove('hidden');
+
+      switchSingleView('viewSimulation');
+      setPresentationStage(1);
+    }
+
+    function closePresentationDemo() {
+      presState.isActive = false;
+      if (presState.timer) clearInterval(presState.timer);
+      presState.isAutoPlaying = false;
+      const hud = document.getElementById('presentationHudBar');
+      if (hud) hud.classList.add('hidden');
+      resetSlopeSimulation();
+    }
+
+    function togglePresentationAutoPlay() {
+      if (presState.isAutoPlaying) {
+        if (presState.timer) clearInterval(presState.timer);
+        presState.isAutoPlaying = false;
+        document.getElementById('presAutoPlayText').textContent = "Auto-Play (45s)";
+      } else {
+        presState.isAutoPlaying = true;
+        document.getElementById('presAutoPlayText').textContent = "Pause Auto-Play";
+        presState.currentStage = 1;
+        setPresentationStage(1);
+
+        presState.timer = setInterval(() => {
+          if (!presState.isAutoPlaying) return;
+          if (presState.currentStage < 5) {
+            setPresentationStage(presState.currentStage + 1);
+          } else {
+            clearInterval(presState.timer);
+            presState.isAutoPlaying = false;
+            document.getElementById('presAutoPlayText').textContent = "Restart Demo";
+          }
+        }, 9000);
+      }
+    }
+
+    function setPresentationStage(stageNum) {
+      presState.currentStage = stageNum;
+      const bar = document.getElementById('presProgressBar');
+      const badge = document.getElementById('presStageBadge');
+      const sub = document.getElementById('presSubtitle');
+
+      if (bar) bar.style.width = `${(stageNum / 5) * 100}%`;
+
+      document.querySelectorAll('.pres-stage-btn').forEach((btn, idx) => {
+        if (idx === stageNum - 1) {
+          btn.classList.add('ring-2', 'ring-white', 'scale-105');
+        } else {
+          btn.classList.remove('ring-2', 'ring-white', 'scale-105');
+        }
+      });
+
+      if (stageNum === 1) {
+        switchSingleView('viewSimulation');
+        loadSimScenario('dry');
+        if (badge) badge.textContent = "Stage 1 / 5: Baseline Monitoring";
+        if (sub) sub.textContent = "Normal mountain slope (FoS = 1.54). Geotechnical IoT sensors actively polling across North Ridge.";
+      } else if (stageNum === 2) {
+        switchSingleView('viewSimulation');
+        loadSimScenario('rain');
+        if (badge) badge.textContent = "Stage 2 / 5: Cloudburst Downpour";
+        if (sub) sub.textContent = "Severe monsoon downpour (45 mm/h). Water table swells, rain saturates topsoil, pore-pressure rises.";
+      } else if (stageNum === 3) {
+        switchSingleView('viewSimulation');
+        loadSimScenario('warning');
+        if (badge) badge.textContent = "Stage 3 / 5: Tension Fissures & Creep";
+        if (sub) sub.textContent = "Inclinometer detects 2.15° tilt creep. Tension crack tears across asphalt road cut. System issues warning.";
+      } else if (stageNum === 4) {
+        switchSingleView('viewSimulation');
+        triggerCatastrophicLandslide();
+        if (badge) badge.textContent = "Stage 4 / 5: CATASTROPHIC SLOPE COLLAPSE!";
+        if (sub) sub.textContent = "MASS WASTING RUPTURE! Shear plane gives way, 4,200m³ debris surges down gully, sirens blare!";
+      } else if (stageNum === 5) {
+        switchSingleView('viewMap');
+        triggerMapLandslideDemo();
+        if (badge) badge.textContent = "Stage 5 / 5: Autonomous Life-Saving Response";
+        if (sub) sub.textContent = "Rapid intervention: Emergency SMS dispatched, road closure flagged, safe high-ridge corridor guides residents to school shelter.";
+      }
+    }
+
+    // Live GIS Map Landslide Demo
+    function triggerMapLandslideDemo() {
+      if (!map) initStandaloneMap();
+      switchSingleView('viewMap');
+
+      map.flyTo([31.1048, 77.1734], 15, { animate: true, duration: 1.5 });
+
+      const mapCard = document.getElementById('standaloneMapCard');
+      if (mapCard) {
+        mapCard.classList.remove('landslide-shaking');
+        void mapCard.offsetWidth;
+        mapCard.classList.add('landslide-shaking');
+        setTimeout(() => mapCard.classList.remove('landslide-shaking'), 3000);
+      }
+
+      if (mapLandslideMarker) map.removeLayer(mapLandslideMarker);
+
+      const blockedIcon = L.divIcon({
+        className: 'custom-leaflet-marker',
+        html: `
+          <div class="relative flex items-center justify-center">
+            <div class="absolute w-12 h-12 rounded-full bg-red-600 sonar-ring"></div>
+            <div class="w-10 h-10 rounded-2xl bg-red-600 border-2 border-white shadow-2xl flex items-center justify-center text-white text-base font-black">
+              ⛔
+            </div>
+          </div>
+        `,
+        iconSize: [40, 40],
+        iconAnchor: [20, 20]
+      });
+
+      mapLandslideMarker = L.marker([31.1015, 77.1720], { icon: blockedIcon }).addTo(map)
+        .bindPopup(`
+          <div class="p-3 bg-slate-900 text-white rounded-xl space-y-1.5 min-w-[220px]">
+            <div class="flex items-center space-x-1.5 font-bold text-red-400 text-sm">
+              <span>⛔</span>
+              <span>ROAD KM 4.2 SEVERED BY LANDSLIDE</span>
+            </div>
+            <div class="text-xs text-slate-300">Debris volume: <strong>4,200 m³</strong> rock & mud</div>
+            <div class="text-xs text-emerald-400 font-bold">✓ Alternate route diverted via Tara Devi Ridge Bypass</div>
+          </div>
+        `).openPopup();
+
+      routeDirectToShelter(31.0920, 77.1700, "Govt Higher Secondary School Safe Shelter");
+
+      startEarthRumbleSound();
+      if (!isSirenOn) toggleEmergencySiren();
+
+      setTimeout(() => {
+        openSmsSimulator("URGENT SDRF EVACUATION: Landslide at North Ridge severed main access road at KM 4.2. DO NOT USE VALLEY ROAD. Take Tara Devi Ridge crest path to Govt School Auditorium Shelter.");
+      }, 2500);
+    }
+
+    // Emergency Siren Synthesizer
+    function toggleEmergencySiren() {
+      const btnText = document.getElementById('sirenBtnText');
+      if (isSirenOn) {
+        if (sirenInterval) clearInterval(sirenInterval);
+        if (sirenOsc) { try { sirenOsc.stop(); sirenOsc.disconnect(); } catch (e) {} sirenOsc = null; }
+        isSirenOn = false;
+        if (btnText) btnText.textContent = "Test Siren";
+      } else {
+        try {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          audioCtx = audioCtx || new AudioContext();
+          if (audioCtx.state === 'suspended') audioCtx.resume();
+          sirenOsc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          gain.gain.value = 0.1;
+          sirenOsc.type = 'sawtooth';
+          sirenOsc.frequency.setValueAtTime(750, audioCtx.currentTime);
+          sirenOsc.connect(gain);
+          gain.connect(audioCtx.destination);
+          sirenOsc.start();
+          isSirenOn = true;
+          if (btnText) btnText.textContent = "Mute Siren";
+
+          let high = false;
+          sirenInterval = setInterval(() => {
+            if (!isSirenOn || !sirenOsc) return;
+            sirenOsc.frequency.exponentialRampToValueAtTime(high ? 950 : 700, audioCtx.currentTime + 0.35);
+            high = !high;
+          }, 400);
+        } catch (e) { console.warn(e); }
+      }
+    }
+
+    // Modal Phone Simulator
+    function openSmsSimulator() {
+      const modal = document.getElementById('smsModal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+    function closeSmsSimulator() {
+      const modal = document.getElementById('smsModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+    function citizenConfirmSafe() {
+      const c = document.getElementById('phoneReplyConfirmation');
+      c.textContent = "✓ Status Confirmed: 'Safe at Shelter'. Dispatched to SDRF.";
+      c.classList.remove('hidden');
+    }
+    function citizenRequestRescue() {
+      const c = document.getElementById('phoneReplyConfirmation');
+      c.textContent = "⚠️ SOS Transport Request Logged! GPS sent to Rescue Team.";
+      c.classList.remove('hidden');
+    }
+
+    // Forms
+    function handleStandaloneSmsSignup(e) {
+      e.preventDefault();
+      document.getElementById('singleSignupSuccess').classList.remove('hidden');
+      setTimeout(openSmsSimulator, 600);
+    }
+
+    function handleStandaloneReportSubmit(e) {
+      e.preventDefault();
+      document.getElementById('reportSuccess').classList.remove('hidden');
+      const feed = document.getElementById('standaloneReportsFeed');
+      const name = document.getElementById('reportName').value;
+      const loc = document.getElementById('reportLoc').value;
+      const type = document.getElementById('reportType').value;
+      const details = document.getElementById('reportDetails').value;
+
+      feed.insertAdjacentHTML('afterbegin', `
+        <div class="p-3 bg-slate-900 rounded-xl border border-slate-700 space-y-1">
+          <div class="flex justify-between text-xs">
+            <strong class="text-white">${type} (${loc})</strong>
+            <span class="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded">Just Now</span>
+          </div>
+          <p class="text-[11px] text-slate-300">${details}</p>
+          <span class="text-[10px] text-slate-400">Reported by ${name}</span>
+        </div>
+      `);
+      e.target.reset();
+    }
+
+    function exportStandaloneCsv() {
+      const csv = "data:text/csv;charset=utf-8,Timestamp,Station,SoilMoisture,Rainfall,Tilt\nToday 10:00,Station Alpha,76.4,38.5,2.15\n";
+      const link = document.createElement("a");
+      link.setAttribute("href", encodeURI(csv));
+      link.setAttribute("download", "landguard_telemetry.csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // Populate Initial Data on Load
+    document.addEventListener('DOMContentLoaded', () => {
+      if (window.lucide) window.lucide.createIcons();
+
+      // Bulletins
+      const bFeed = document.getElementById('standaloneBulletinsFeed');
+      if (bFeed) {
+        bFeed.innerHTML = BULLETINS.map(b => `
+          <div class="p-3 bg-slate-900 rounded-xl border border-slate-700 space-y-1">
+            <div class="flex justify-between text-xs">
+              <strong class="text-white">${b.title}</strong>
+              <span class="text-[10px] text-slate-400 font-mono">${b.time}</span>
+            </div>
+            <p class="text-[11px] text-slate-300">${b.text}</p>
+          </div>
+        `).join('');
+      }
+
+      // Shelters List
+      const sList = document.getElementById('standaloneSheltersList');
+      if (sList) {
+        sList.innerHTML = SHELTERS.map(s => `
+          <div class="p-3 bg-slate-900 rounded-xl border border-slate-700 space-y-1">
+            <div class="flex justify-between text-xs">
+              <strong class="text-white">${s.name}</strong>
+              <span class="text-[10px] text-emerald-400">${s.status}</span>
+            </div>
+            <div class="text-[11px] text-slate-400">Capacity: ${s.capacity} • <a href="tel:${s.phone}" class="text-emerald-400 underline">${s.phone}</a></div>
+            <p class="text-[10px] text-slate-400">Route: ${s.route}</p>
+          </div>
+        `).join('');
+      }
+
+      // Checklist
+      const cList = document.getElementById('standaloneChecklistItems');
+      if (cList) {
+        cList.innerHTML = CHECKLIST.map((item, idx) => `
+          <label class="flex items-center space-x-3 p-2.5 bg-slate-900 rounded-xl border border-slate-700 cursor-pointer text-xs text-slate-200">
+            <input type="checkbox" onchange="updateChecklistCount()" class="chk-item w-4 h-4 rounded text-emerald-500 bg-slate-800 border-slate-600">
+            <span>${item}</span>
+          </label>
+        `).join('');
+      }
+
+      // Helplines
+      const hGrid = document.getElementById('standaloneHelplinesGrid');
+      if (hGrid) {
+        hGrid.innerHTML = HELPLINES.map(h => `
+          <div class="p-4 bg-slate-900 rounded-2xl border border-red-900/30 space-y-2">
+            <div class="flex justify-between text-xs">
+              <span class="font-bold text-white">${h.role}</span>
+              <span class="font-mono text-red-400 font-bold">#${h.number}</span>
+            </div>
+            <a href="tel:${h.direct}" class="inline-block text-xs font-bold text-red-400 hover:underline">Direct: ${h.direct}</a>
+          </div>
+        `).join('');
+      }
+    });
+
+    function updateChecklistCount() {
+      const total = document.querySelectorAll('.chk-item').length;
+      const checked = document.querySelectorAll('.chk-item:checked').length;
+      document.getElementById('standaloneChecklistBadge').textContent = `${checked}/${total} Packed`;
+    }
+  </script>
+</body>
+</html>

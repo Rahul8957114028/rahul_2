@@ -1,0 +1,205 @@
+/* LandGuard Comprehensive Styles & Animations */
+
+:root {
+  --status-normal: #10b981;
+  --status-advisory: #f59e0b;
+  --status-warning: #f97316;
+  --status-critical: #ef4444;
+}
+
+/* Custom pulsing radar for map markers and active telemetry pings */
+@keyframes radar-pulse {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+  }
+  70% {
+    transform: scale(1.15);
+    box-shadow: 0 0 0 16px rgba(239, 68, 68, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
+}
+
+.radar-ping {
+  animation: radar-pulse 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+@keyframes siren-strobe {
+  0%, 100% {
+    opacity: 1;
+    background-color: #ef4444;
+  }
+  50% {
+    opacity: 0.85;
+    background-color: #dc2626;
+  }
+}
+
+.siren-active {
+  animation: siren-strobe 1s infinite;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* Leaflet Map overrides for dark/light consistency */
+.leaflet-container {
+  font-family: inherit;
+  border-radius: 0.75rem;
+  background-color: #1e293b;
+}
+
+.leaflet-popup-content-wrapper {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+  border-radius: 0.75rem !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3) !important;
+  padding: 0 !important;
+  overflow: hidden;
+  border: 1px solid #334155 !important;
+}
+
+.leaflet-popup-content {
+  margin: 0 !important;
+  line-height: 1.4 !important;
+}
+
+.leaflet-popup-tip {
+  background-color: #0f172a !important;
+}
+
+/* Mobile Alert Simulator Phone Mockup */
+.phone-screen {
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  border: 8px solid #1e293b;
+  border-radius: 36px;
+  overflow: hidden;
+}
+
+/* Emergency Alert Flash Animation */
+@keyframes emergency-vibe {
+  0%, 100% { transform: translate(0, 0); }
+  20% { transform: translate(-2px, 2px); }
+  40% { transform: translate(2px, -2px); }
+  60% { transform: translate(-2px, -2px); }
+  80% { transform: translate(2px, 2px); }
+}
+
+.vibrate-alert {
+  animation: emergency-vibe 0.3s infinite;
+}
+
+/* Progress gauge transitions */
+.transition-meter {
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.5s ease;
+}
+
+/* Checklist item checked styling */
+.checklist-checkbox:checked + span {
+  text-decoration: line-through;
+  color: #64748b;
+}
+
+/* Active navigation pill */
+.nav-link-active {
+  background-color: #10b981 !important;
+  color: #022c22 !important;
+  font-weight: 700 !important;
+}
+
+/* Glass card styling */
+.glass-panel {
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(51, 65, 85, 0.8);
+}
+
+/* Animated Evacuation Route Flow (Marching Line) */
+@keyframes dash-flow {
+  to {
+    stroke-dashoffset: -32;
+  }
+}
+
+.route-flow-line {
+  stroke-dasharray: 8, 8;
+  animation: dash-flow 1.2s linear infinite;
+}
+
+.debris-flow-line {
+  stroke-dasharray: 6, 6;
+  animation: dash-flow 0.8s linear infinite;
+}
+
+/* Sonar radar ring for live sensor monitoring */
+@keyframes sonar-wave {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(2.8);
+    opacity: 0;
+  }
+}
+
+.sonar-ring {
+  animation: sonar-wave 2.2s cubic-bezier(0.1, 0.2, 0.8, 1) infinite;
+}
+
+/* Fullscreen Map Mode */
+.map-fullscreen-active {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 9999 !important;
+  border-radius: 0 !important;
+}
+
+/* Presentation Shaking & Landslide FX */
+@keyframes screen-shake {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  20% { transform: translate(-3px, 2px) rotate(-0.5deg); }
+  40% { transform: translate(3px, -2px) rotate(0.5deg); }
+  60% { transform: translate(-3px, -1px) rotate(-0.3deg); }
+  80% { transform: translate(2px, 3px) rotate(0.3deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+.landslide-shaking {
+  animation: screen-shake 0.35s ease-in-out infinite;
+}
+
+@keyframes pulse-glow-rose {
+  0%, 100% { box-shadow: 0 0 15px rgba(244, 63, 94, 0.4); }
+  50% { box-shadow: 0 0 28px rgba(244, 63, 94, 0.85); }
+}
+.glow-rose {
+  animation: pulse-glow-rose 1.8s infinite;
+}
+
+@keyframes warning-strobe {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.flash-warning {
+  animation: warning-strobe 0.8s infinite;
+}
+

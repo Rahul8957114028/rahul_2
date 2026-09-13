@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LandGuard - Geotechnical IoT & Sensor Telemetry Hub</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            guard: {
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <link rel="stylesheet" href="styles.css">
+
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+  </style>
+</head>
+<body data-page="telemetry" class="bg-slate-900 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-amber-500 selection:text-slate-950">
+
+  <!-- TOP EMERGENCY MARQUEE BANNER -->
+  <aside aria-label="Emergency Alerts" id="emergencyBanner" class="bg-amber-500 text-slate-950 px-4 py-2 text-xs md:text-sm font-semibold flex items-center justify-between shadow-md transition-colors duration-500">
+    <div class="flex items-center space-x-2 max-w-6xl mx-auto flex-1 truncate">
+      <span class="inline-flex items-center justify-center p-1 bg-slate-950 text-amber-400 rounded-md">
+        <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+      </span>
+      <span class="font-bold tracking-wider uppercase text-[11px] bg-slate-950/10 px-2 py-0.5 rounded" id="bannerRiskBadge">ADVISORY</span>
+      <span id="bannerText" class="truncate">
+        Sensor Telemetry Streaming: Multi-depth TDR probes active at North Ridge, Valley Pass and Creek Basin.
+      </span>
+    </div>
+    <div class="flex items-center space-x-3 text-xs pl-2">
+      <button id="btnSirenToggle" class="flex items-center space-x-1.5 bg-slate-950 text-white px-2.5 py-1 rounded hover:bg-slate-800 transition shadow">
+        <i data-lucide="volume-2" class="w-3.5 h-3.5 text-amber-400"></i>
+        <span id="sirenBtnText">Test Siren</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- UNIFIED NAVIGATION BAR -->
+  <header class="sticky top-0 z-40 bg-slate-900/95 backdrop-blur border-b border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      
+      <a href="index.html" class="flex items-center space-x-3 group">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 via-teal-500 to-amber-400 flex items-center justify-center text-slate-950 shadow-lg shadow-emerald-950/30 group-hover:scale-105 transition-transform">
+          <i data-lucide="shield-alert" class="w-6 h-6 stroke-[2.2]"></i>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="text-xl font-black tracking-tight text-white">Land<span class="text-emerald-400">Guard</span></span>
+            <span class="px-1.5 py-0.5 text-[10px] font-bold uppercase rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">Telemetry</span>
+          </div>
+          <p class="text-[11px] text-slate-400 hidden sm:block">IoT Soil Saturation, Rainfall & Inclinometer Hub</p>
+        </div>
+      </a>
+
+      <nav class="hidden lg:flex items-center space-x-1 bg-slate-800/80 p-1 rounded-xl border border-slate-700/60 text-xs font-semibold">
+        <a href="index.html" data-nav-target="index" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition">Home</a>
+        <a href="alerts.html" data-nav-target="alerts" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition">Alerts & SMS</a>
+        <a href="map.html" data-nav-target="map" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition">Hazard Map</a>
+        <a href="telemetry.html" data-nav-target="telemetry" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition">Sensor Telemetry</a>
+        <a href="community.html" data-nav-target="community" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition">Community Safety</a>
+        <a href="reports.html" data-nav-target="reports" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white transition">Citizen Reports</a>
+      </nav>
+
+      <div class="flex items-center space-x-2.5">
+        <button onclick="exportTelemetryCsv()" class="flex items-center space-x-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-medium transition shadow-sm">
+          <i data-lucide="download" class="w-3.5 h-3.5 text-emerald-400"></i>
+          <span>Export CSV</span>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Mobile Nav -->
+    <div class="lg:hidden border-t border-slate-800 px-4 py-2 flex items-center justify-between overflow-x-auto text-xs font-medium space-x-2">
+      <a href="index.html" class="px-2.5 py-1 rounded-md text-slate-300 whitespace-nowrap">Home</a>
+      <a href="alerts.html" class="px-2.5 py-1 rounded-md text-slate-300 whitespace-nowrap">Alerts</a>
+      <a href="map.html" class="px-2.5 py-1 rounded-md text-slate-300 whitespace-nowrap">Map</a>
+      <a href="telemetry.html" class="px-2.5 py-1 rounded-md text-emerald-400 whitespace-nowrap">Sensors</a>
+      <a href="community.html" class="px-2.5 py-1 rounded-md text-slate-300 whitespace-nowrap">Safety</a>
+      <a href="reports.html" class="px-2.5 py-1 rounded-md text-slate-300 whitespace-nowrap">Reports</a>
+    </div>
+  </header>
+
+  <!-- MAIN TELEMETRY CONTAINER -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+    <!-- Top Controller Bar -->
+    <div class="bg-slate-800/90 rounded-2xl border border-slate-700 p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-lg">
+      <div>
+        <div class="flex items-center space-x-2">
+          <h1 class="text-xl font-black text-white">Geotechnical IoT Sensor Monitoring</h1>
+          <span class="px-2 py-0.5 text-[10px] font-bold rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Streaming Live</span>
+        </div>
+        <p class="text-xs text-slate-400 mt-1">Multi-depth TDR soil moisture, tipping-bucket precipitation, and MEMS tilt-meters.</p>
+      </div>
+
+      <!-- Station Selector -->
+      <div class="flex items-center space-x-2">
+        <label for="stationSelector" class="text-xs font-semibold text-slate-300">Station:</label>
+        <select id="stationSelector" onchange="changeTelemetryStation(this.value)" class="bg-slate-900 border border-slate-600 rounded-xl text-xs sm:text-sm text-white px-3 py-2 focus:outline-none focus:border-emerald-500 font-medium">
+          <option value="station-alpha">Station Alpha - North Ridge (38° Slope)</option>
+          <option value="station-beta">Station Beta - Valley Pass (26° Slope)</option>
+          <option value="station-gamma">Station Gamma - Creek Basin (18° Slope)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Live Telemetry Metrics Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      
+      <!-- Metric 1: Soil Moisture -->
+      <div class="bg-slate-800/80 rounded-2xl border border-slate-700 p-5 space-y-3 shadow">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Soil Moisture (Core)</span>
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">Threshold 70%</span>
+        </div>
+
+        <div class="flex items-baseline space-x-2">
+          <span id="telMoistureVal" class="text-3xl font-extrabold text-white font-mono">76.4</span>
+          <span class="text-sm font-semibold text-slate-400">% VWC</span>
+        </div>
+
+        <div class="space-y-1">
+          <div class="h-2 w-full bg-slate-900 rounded-full overflow-hidden">
+            <div id="telMoistureBar" class="h-full bg-amber-500 transition-meter" style="width: 76.4%"></div>
+          </div>
+          <div class="flex justify-between text-[10px] text-slate-400 pt-0.5">
+            <span>Shallow (0.5m): <strong id="telMoistureShallow" class="text-white">82.1%</strong></span>
+            <span>Deep (2.5m): <strong id="telMoistureDeep" class="text-white">65.0%</strong></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Metric 2: Precipitation Rate -->
+      <div class="bg-slate-800/80 rounded-2xl border border-slate-700 p-5 space-y-3 shadow">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Precipitation Rate</span>
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">Heavy Rain</span>
+        </div>
+
+        <div class="flex items-baseline space-x-2">
+          <span id="telRain1hVal" class="text-3xl font-extrabold text-white font-mono">38.5</span>
+          <span class="text-sm font-semibold text-slate-400">mm/h</span>
+        </div>
+
+        <div class="flex items-center justify-between text-xs pt-1 border-t border-slate-700/60 text-slate-300">
+          <span>24h Cumulative:</span>
+          <span id="telRain24hVal" class="font-mono font-bold text-white">124.0 mm</span>
+        </div>
+      </div>
+
+      <!-- Metric 3: Slope Tilt & Displacement -->
+      <div class="bg-slate-800/80 rounded-2xl border border-slate-700 p-5 space-y-3 shadow">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Inclinometer Tilt</span>
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">Active Creep</span>
+        </div>
+
+        <div class="flex items-baseline space-x-2">
+          <span id="telTiltVal" class="text-3xl font-extrabold text-white font-mono">2.15</span>
+          <span class="text-sm font-semibold text-slate-400">° Displacement</span>
+        </div>
+
+        <div class="flex items-center justify-between text-xs pt-1 border-t border-slate-700/60 text-slate-300">
+          <span>Bedrock Anchor Creep:</span>
+          <span id="telDisplacementVal" class="font-mono font-bold text-amber-400">+14.2 mm</span>
+        </div>
+      </div>
+
+      <!-- Metric 4: Pore Water Pressure -->
+      <div class="bg-slate-800/80 rounded-2xl border border-slate-700 p-5 space-y-3 shadow">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Pore Pressure (u)</span>
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Vibrating Wire</span>
+        </div>
+
+        <div class="flex items-baseline space-x-2">
+          <span id="telPorePressureVal" class="text-3xl font-extrabold text-white font-mono">42.8</span>
+          <span class="text-sm font-semibold text-slate-400">kPa</span>
+        </div>
+
+        <div class="flex items-center justify-between text-xs pt-1 border-t border-slate-700/60 text-slate-300">
+          <span>Ambient Environment:</span>
+          <span id="telEnvVal" class="font-mono font-bold text-slate-200">16.2°C / 94%</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Multi-Depth Time-Series Analytics Chart -->
+    <div class="bg-slate-800/90 rounded-2xl border border-slate-700 p-6 space-y-4 shadow-xl">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 class="text-base font-bold text-white flex items-center space-x-2">
+            <i data-lucide="trending-up" class="w-5 h-5 text-emerald-400"></i>
+            <span>24-Hour Geotechnical Profile: Multi-Depth Saturation vs Precipitation</span>
+          </h2>
+          <p class="text-xs text-slate-400">Illustrating topsoil infiltration lag through shallow, core and bedrock horizons</p>
+        </div>
+        <button onclick="exportTelemetryCsv()" class="text-xs bg-slate-900 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg border border-slate-700 transition flex items-center space-x-1.5">
+          <i data-lucide="download" class="w-3.5 h-3.5 text-emerald-400"></i>
+          <span>Download Telemetry (.CSV)</span>
+        </button>
+      </div>
+
+      <div class="h-80 w-full">
+        <canvas id="deepTelemetryChart"></canvas>
+      </div>
+    </div>
+
+    <!-- INTERACTIVE RAINFALL & THREAT SIMULATOR -->
+    <div class="bg-gradient-to-br from-slate-800 via-slate-850 to-slate-900 rounded-2xl border border-slate-700 p-6 space-y-6 shadow-xl">
+      <div class="flex items-center justify-between border-b border-slate-700 pb-4">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400">
+            <i data-lucide="sliders" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-white">Monsoon Cloudburst Threat Simulator</h3>
+            <p class="text-xs text-slate-400">Adjust sliders to simulate extreme weather and watch the Factor of Safety (FoS) dynamically recalculate.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Rain Slider -->
+        <div class="space-y-2">
+          <div class="flex justify-between text-xs font-semibold">
+            <span class="text-slate-300">Simulate Rainfall Intensity:</span>
+            <span id="telSimRainVal" class="font-mono text-blue-400 font-bold">38.5 mm/h</span>
+          </div>
+          <input 
+            type="range" 
+            id="telSimRainSlider" 
+            min="0" 
+            max="90" 
+            value="38" 
+            oninput="handleTelemetrySimulation()"
+            class="w-full accent-blue-500 cursor-pointer h-2 bg-slate-900 rounded-lg appearance-none"
+          />
+          <div class="flex justify-between text-[10px] text-slate-400 font-mono">
+            <span>0 mm (Dry)</span>
+            <span>25 mm (Moderate)</span>
+            <span>50 mm (Torrential)</span>
+            <span>90 mm (Cloudburst)</span>
+          </div>
+        </div>
+
+        <!-- Moisture Slider -->
+        <div class="space-y-2">
+          <div class="flex justify-between text-xs font-semibold">
+            <span class="text-slate-300">Simulate Soil Saturation:</span>
+            <span id="telSimMoistureVal" class="font-mono text-amber-400 font-bold">76.4% VWC</span>
+          </div>
+          <input 
+            type="range" 
+            id="telSimMoistureSlider" 
+            min="30" 
+            max="95" 
+            value="76" 
+            oninput="handleTelemetrySimulation()"
+            class="w-full accent-amber-500 cursor-pointer h-2 bg-slate-900 rounded-lg appearance-none"
+          />
+          <div class="flex justify-between text-[10px] text-slate-400 font-mono">
+            <span>30% (Dry Base)</span>
+            <span>60% (Moist)</span>
+            <span>75% (Warning Threshold)</span>
+            <span>95% (Liquefaction)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Simulation Result Output -->
+      <div class="bg-slate-900/90 rounded-xl p-4 border border-slate-700/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div class="flex items-center space-x-3">
+          <div id="telSimBadge" class="px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40">
+            ADVISORY TIER
+          </div>
+          <div>
+            <div id="telSimFos" class="text-xs font-bold text-amber-400 font-mono">Factor of Safety (FoS) = 1.18</div>
+            <p id="telSimSummary" class="text-[11px] text-slate-400 mt-0.5">High pore pressure reducing shear strength along slip plane.</p>
+          </div>
+        </div>
+
+        <div class="flex items-center space-x-2">
+          <button onclick="openSmsSimulator()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-medium px-3.5 py-2 rounded-xl transition flex items-center space-x-1.5">
+            <i data-lucide="smartphone" class="w-3.5 h-3.5 text-amber-400"></i>
+            <span>Preview Mobile SMS</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- SHARED MOBILE SMS ALERT SIMULATOR MODAL -->
+  <div id="smsModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="relative w-full max-w-sm">
+      <button onclick="closeSmsSimulator()" class="absolute -top-10 right-0 text-slate-400 hover:text-white p-2" title="Close">
+        <i data-lucide="x" class="w-6 h-6"></i>
+      </button>
+
+      <div class="phone-screen bg-slate-950 border-4 border-slate-700 text-white rounded-[40px] p-4 shadow-2xl relative">
+        <div class="w-28 h-4 bg-slate-800 rounded-full mx-auto mb-3 flex items-center justify-center space-x-2">
+          <div class="w-2 h-2 rounded-full bg-slate-900"></div>
+          <div class="w-8 h-1 rounded-full bg-slate-700"></div>
+        </div>
+
+        <div class="space-y-4 pt-1 pb-2">
+          <div class="flex justify-between text-[11px] text-slate-400 font-mono px-1">
+            <span id="phoneClock">11:45 AM</span>
+            <div class="flex items-center space-x-1.5">
+              <i data-lucide="wifi" class="w-3 h-3"></i>
+              <i data-lucide="battery-charging" class="w-3.5 h-3.5 text-emerald-400"></i>
+            </div>
+          </div>
+
+          <div id="phoneAlertCard" class="bg-red-600 text-white rounded-2xl p-4 shadow-xl space-y-2.5 vibrate-alert">
+            <div class="flex items-center justify-between text-xs font-bold">
+              <span class="flex items-center space-x-1.5">
+                <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+                <span>EMERGENCY ALERT: LANDSLIDE WARNING</span>
+              </span>
+              <span class="text-[10px] opacity-80">NOW</span>
+            </div>
+            
+            <p id="phoneAlertMsg" class="text-xs leading-relaxed font-medium">
+              LandGuard System: Critical slope movement and 76.4% soil saturation at North Ridge. Evacuate to Govt School Safe Shelter immediately!
+            </p>
+
+            <div class="text-[10px] opacity-90 font-mono bg-red-700/60 p-1.5 rounded">
+              Sender: DISASTER-GOVT-ALERT | Cell Broadcast #HP-401
+            </div>
+          </div>
+
+          <div class="bg-slate-900 rounded-2xl p-3 space-y-2 border border-slate-800 text-xs">
+            <div class="text-[10px] text-center text-slate-400 border-b border-slate-800 pb-1">SMS Thread: LandGuard Early Warning</div>
+            <div class="space-y-2">
+              <div class="bg-slate-800 rounded-xl p-2 text-[11px] text-slate-200">
+                <span class="font-bold text-amber-400 block mb-0.5">Advisory Notice:</span>
+                Rainfall heavy in Sector 4. Saturated soil warning. Keep family go-bags packed.
+              </div>
+              <div class="bg-red-950/80 border border-red-800 rounded-xl p-2 text-[11px] text-red-200">
+                <span class="font-bold text-red-400 block mb-0.5">PRIORITY EVACUATION:</span>
+                Tipping threshold exceeded. Head to Higher Secondary School Auditorium Shelter on High Plateau.
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-2 pt-2">
+            <button onclick="citizenConfirmSafe()" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2 rounded-xl text-xs transition flex items-center justify-center space-x-1.5">
+              <i data-lucide="check" class="w-4 h-4"></i>
+              <span>Reply: "I & My Family Are Safe"</span>
+            </button>
+            <button onclick="citizenRequestRescue()" class="w-full bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-300 font-bold py-2 rounded-xl text-xs transition flex items-center justify-center space-x-1.5">
+              <i data-lucide="life-buoy" class="w-4 h-4 text-red-400"></i>
+              <span>Reply: "Need SOS Evacuation Transport"</span>
+            </button>
+          </div>
+
+          <div id="phoneReplyConfirmation" class="hidden text-center text-xs font-semibold text-emerald-400 py-1">
+            Status reported to Central Disaster Cell.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="bg-slate-950 border-t border-slate-800 py-8 mt-auto">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4 text-xs text-slate-400">
+      <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+        <div>
+          <span class="text-white font-bold">LandGuard Geotechnical Telemetry Subsystem</span>
+          <span>• TDR Soil Moisture & MEMS Inclinometers</span>
+        </div>
+        <div class="flex space-x-4">
+          <a href="index.html" class="hover:text-white transition">Home</a>
+          <a href="alerts.html" class="hover:text-white transition">Alerts</a>
+          <a href="map.html" class="hover:text-white transition">Hazard Map</a>
+          <a href="community.html" class="hover:text-white transition">Safety</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="data/mock_telemetry.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

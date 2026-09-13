@@ -1,0 +1,12 @@
+{
+  "name": "landguard-backend",
+  "version": "2.4.0",
+  "description": "Autonomous Geotechnical Early Warning & Telemetry Backend",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": ["landslide", "geotechnical", "early-warning", "iot", "sms-alerts"],
+  "author": "LandGuard Systems",
+  "license": "MIT"
+}
